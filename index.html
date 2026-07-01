@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>EXTERNAL</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0b1f3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EXTERNAL">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1f3a;
+    --bg2:#0f2848;
+    --card:#122d56;
+    --border:#1c3d6e;
+    --border2:#265088;
+    --accent:#3d9ee8;
+    --accent2:#62c0f8;
+    --text:#e8f4ff;
+    --text2:#7db8e8;
+    --text3:#3a6090;
+    --urgent:#e05a4a;
+    --radius:14px;
+    --radius-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* PANTALLA PRINCIPAL */
+  #launcher{
+    max-width:600px;
+    margin:0 auto;
+    padding:env(safe-area-inset-top,0) 20px 40px;
+    display:flex;
+    flex-direction:column;
+    gap:32px;
+    padding-top:max(40px, env(safe-area-inset-top));
+  }
+
+  /* BARRA SUPERIOR: lupa + cerebro */
+  .top-bar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .search-box{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 16px;
+    transition:border-color .2s;
+  }
+  .search-box:focus-within{border-color:var(--accent);}
+  .search-box input{
+    flex:1;
+    background:none;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    font-size:1rem;
+  }
+  .search-box input::placeholder{color:var(--text3);}
+  .search-icon{color:var(--text3);font-size:1rem;}
+
+  .btn-brain{
+    flex-shrink:0;
+    width:52px;height:52px;
+    border-radius:var(--radius-sm);
+    background:var(--card);
+    border:1px solid var(--border);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color .2s;
+    position:relative;
+    overflow:hidden;
+    padding:0;
+  }
+  .btn-brain img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
+  .btn-brain:hover{border-color:var(--accent);}
+  .brain-count{
+    position:absolute;top:6px;right:6px;
+    background:var(--accent);color:#fff;
+    font-size:0.6rem;font-weight:700;
+    width:16px;height:16px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    display:none;
+  }
+  .brain-count.visible{display:flex;}
+
+  /* RESULTADOS BÚSQUEDA */
+  #search-results{display:flex;flex-direction:column;gap:8px;margin-top:-16px;}
+  .result-card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:14px 16px;
+    font-size:0.9rem;color:var(--text);line-height:1.55;
+  }
+  .result-date{font-size:0.72rem;color:var(--accent2);font-weight:600;margin-bottom:6px;display:block;}
+  .no-result{font-size:0.85rem;color:var(--text3);padding:8px 4px;}
+
+  /* MÓDULOS */
+  .modules-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+  }
+  .module-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px 16px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition:border-color .18s, transform .13s;
+    min-height:96px;
+  }
+  .module-card:active{transform:scale(0.97);}
+  .module-card:not(.disabled):hover{border-color:var(--accent);}
+  .module-card.disabled{opacity:0.35;cursor:default;}
+  .module-emoji{font-size:1.6rem;}
+  .module-name{font-size:0.92rem;font-weight:600;color:var(--text);}
+  .module-soon{font-size:0.72rem;color:var(--text3);}
+
+  /* PANEL CEREBRO (notas) */
+  .panel-overlay{
+    position:fixed;inset:0;z-index:400;
+    background:rgba(6,12,22,0.75);
+    backdrop-filter:blur(6px);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .panel-overlay.open{display:flex;}
+  .panel{
+    background:var(--bg2);
+    border:1px solid var(--border2);
+    border-radius:var(--radius) var(--radius) 0 0;
+    width:100%;max-width:600px;
+    max-height:88vh;
+    display:flex;flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom,0);
+  }
+  .panel-header{
+    padding:20px 20px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .panel-title{font-size:1rem;font-weight:600;color:var(--text);}
+  .panel-close{
+    background:none;border:none;color:var(--text3);
+    font-size:1.2rem;cursor:pointer;padding:4px 8px;
+  }
+  .panel-close:hover{color:var(--text);}
+  .panel-body{flex:1;overflow-y:auto;padding:16px 20px;}
+
+  /* INPUT NOTA */
+  .note-input-area{
+    display:flex;gap:8px;align-items:flex-end;
+    margin-bottom:16px;
+  }
+  .note-textarea{
+    flex:1;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:12px 14px;color:var(--text);
+    font-family:'DM Sans',sans-serif;font-size:0.92rem;
+    resize:none;min-height:46px;max-height:120px;
+    outline:none;line-height:1.5;transition:border-color .2s;
+  }
+  .note-textarea:focus{border-color:var(--accent);}
+  .note-textarea::placeholder{color:var(--text3);}
+  .btn-mic{
+    flex-shrink:0;width:46px;height:46px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:var(--card);
+    color:var(--text3);font-size:1.2rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .2s;
+  }
+  .btn-mic:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-mic.recording{background:var(--urgent);border-color:var(--urgent);color:#fff;animation:micpulse 1.2s infinite;}
+  @keyframes micpulse{
+    0%{box-shadow:0 0 0 0 rgba(224,90,74,0.5);}
+    70%{box-shadow:0 0 0 10px rgba(224,90,74,0);}
+    100%{box-shadow:0 0 0 0 rgba(224,90,74,0);}
+  }
+  .btn-save{
+    flex-shrink:0;height:46px;padding:0 18px;
+    border-radius:var(--radius-sm);border:none;
+    background:var(--accent);color:#fff;
+    font-weight:600;font-size:0.88rem;cursor:pointer;
+    transition:background .2s;
+  }
+  .btn-save:hover{background:var(--accent2);}
+  .mic-status{font-size:0.75rem;color:var(--accent2);margin-bottom:12px;min-height:1em;}
+
+  /* LISTA NOTAS */
+  .note-card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:12px 14px;
+    display:flex;gap:10px;align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .note-src{font-size:0.9rem;flex-shrink:0;margin-top:1px;}
+  .note-body{flex:1;min-width:0;}
+  .note-text{font-size:0.9rem;color:var(--text);line-height:1.5;word-break:break-word;}
+  .note-meta{font-size:0.7rem;color:var(--text3);margin-top:4px;}
+  .note-actions{display:flex;gap:6px;flex-shrink:0;}
+  .btn-del{
+    background:none;border:none;color:var(--text3);
+    cursor:pointer;font-size:0.9rem;padding:4px;
+    border-radius:6px;transition:color .2s;
+  }
+  .btn-del:hover{color:var(--urgent);}
+  .notes-empty{font-size:0.85rem;color:var(--text3);text-align:center;padding:28px 0;}
+
+  /* PANTALLA MÓDULO */
+  #module-screen{
+    position:fixed;inset:0;z-index:500;
+    background:var(--bg);
+    display:none;flex-direction:column;
+  }
+  #module-screen.open{display:flex;}
+  .module-bar{
+    flex-shrink:0;background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    padding:calc(12px + env(safe-area-inset-top,0)) 14px 12px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .module-back{
+    background:var(--card);border:1px solid var(--border2);
+    color:var(--text);border-radius:var(--radius-sm);
+    padding:9px 14px;font-size:0.86rem;cursor:pointer;
+    font-family:'DM Sans',sans-serif;transition:border-color .2s;
+  }
+  .module-back:hover{border-color:var(--accent);color:var(--accent);}
+  .module-bar-title{font-size:0.85rem;color:var(--text3);}
+  #module-frame{flex:1;width:100%;border:none;}
+
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div id="launcher">
+  <div class="top-bar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="text" placeholder="Busca en tu memoria…" oninput="buscar(this.value)">
+    </div>
+    <button class="btn-brain" onclick="abrirPanel()" title="Mis notas">
+      <img src="./brain.png" alt="Notas">
+      <span class="brain-count" id="brain-count"></span>
+    </button>
+  </div>
+
+  <div id="search-results"></div>
+
+  <div class="modules-grid" id="modules-grid"></div>
+</div>
+
+<!-- PANEL NOTAS (cerebro) -->
+<div class="panel-overlay" id="panel-overlay" onclick="clickOverlay(event)">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">🧠 Notas</span>
+      <button class="panel-close" onclick="cerrarPanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="note-input-area">
+        <textarea id="note-input" class="note-textarea" placeholder="Escribe o dicta algo…" rows="1" oninput="autoGrow(this)"></textarea>
+        <button class="btn-mic" id="btn-mic" onclick="toggleDictado()" title="Dictar">🎙️</button>
+        <button class="btn-save" onclick="guardarNota()">Guardar</button>
+      </div>
+      <div class="mic-status" id="mic-status"></div>
+      <div id="notes-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA MÓDULO -->
+<div id="module-screen">
+  <div class="module-bar">
+    <button class="module-back" onclick="cerrarModulo()">← EXTERNAL</button>
+    <span class="module-bar-title" id="module-bar-title"></span>
+  </div>
+  <iframe id="module-frame" src=""></iframe>
+</div>
+
+<script>
+// ── DB ─────────────────────────────────────────────────
+let db;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('external_db',1);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('tareas_folders')) d.createObjectStore('tareas_folders',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('tareas_tasks')){const ts=d.createObjectStore('tareas_tasks',{keyPath:'id'});ts.createIndex('folderId','folderId');}
+      if(!d.objectStoreNames.contains('coches')) d.createObjectStore('coches',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('notes')) d.createObjectStore('notes',{keyPath:'id'});
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db);};
+    req.onerror=rej;
+  });
+}
+const dbGetAll=s=>new Promise((r,j)=>{const q=db.transaction(s,'readonly').objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=j;});
+const dbPut=(s,o)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).put(o);q.onsuccess=()=>r();q.onerror=j;});
+const dbDel=(s,id)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).delete(id);q.onsuccess=()=>r();q.onerror=j;});
+
+// ── UTILS ──────────────────────────────────────────────
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const normaliza=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function fechaBonita(ts){
+  return new Date(ts).toLocaleDateString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+// ── MÓDULOS ────────────────────────────────────────────
+const MODULOS=[
+  {id:'tareas',nombre:'Tareas',emoji:'📋',src:'./Modules/tareas.html',activo:true},
+  {id:'coches',nombre:'Vehículos',emoji:'🚗',src:'./Modules/coches.html',activo:true},
+  {id:'diario',nombre:'Diario',emoji:'📔',src:null,activo:false},
+  {id:'riegos',nombre:'Riegos',emoji:'🌿',src:null,activo:false},
+  {id:'residencia',nombre:'Residencia',emoji:'🏥',src:null,activo:false},
+];
+function renderModulos(){
+  document.getElementById('modules-grid').innerHTML=MODULOS.map(m=>`
+    <div class="module-card${m.activo?'':' disabled'}" ${m.activo?`onclick="abrirModulo('${m.id}')"`:''}> 
+      <span class="module-emoji">${m.emoji}</span>
+      <div class="module-name">${m.nombre}</div>
+      ${!m.activo?`<div class="module-soon">Próximamente</div>`:''}
+    </div>`).join('');
+}
+function abrirModulo(id){
+  const m=MODULOS.find(x=>x.id===id);if(!m||!m.activo)return;
+  document.getElementById('module-bar-title').textContent=m.nombre;
+  document.getElementById('module-frame').src=m.src;
+  document.getElementById('module-screen').classList.add('open');
+}
+function cerrarModulo(){
+  document.getElementById('module-screen').classList.remove('open');
+  document.getElementById('module-frame').src='';
+}
+
+// ── PANEL NOTAS ────────────────────────────────────────
+function abrirPanel(){document.getElementById('panel-overlay').classList.add('open');}
+function cerrarPanel(){document.getElementById('panel-overlay').classList.remove('open');}
+function clickOverlay(e){if(e.target===document.getElementById('panel-overlay'))cerrarPanel();}
+
+async function cargarNotas(){
+  const notas=await dbGetAll('notes');
+  notas.sort((a,b)=>b.createdAt-a.createdAt);
+  const count=document.getElementById('brain-count');
+  if(notas.length){count.textContent=notas.length>99?'99+':notas.length;count.classList.add('visible');}
+  else{count.classList.remove('visible');}
+  const list=document.getElementById('notes-list');
+  if(!notas.length){list.innerHTML='<div class="notes-empty">Vacío. Todo tranquilo.</div>';return;}
+  list.innerHTML=notas.map(n=>`
+    <div class="note-card">
+      <span class="note-src">${n.source==='voz'?'🎙️':'📝'}</span>
+      <div class="note-body">
+        <div class="note-text">${esc(n.text)}</div>
+        <div class="note-meta">${fechaBonita(n.createdAt)}</div>
+      </div>
+      <div class="note-actions">
+        <button class="btn-del" onclick="borrarNota('${n.id}')" title="Borrar">🗑</button>
+      </div>
+    </div>`).join('');
+}
+async function guardarNota(){
+  const input=document.getElementById('note-input');
+  const text=input.value.trim();if(!text)return;
+  await dbPut('notes',{id:uid(),text,source:ultimaFuente,createdAt:Date.now()});
+  input.value='';autoGrow(input);ultimaFuente='texto';
+  cargarNotas();
+}
+async function borrarNota(id){await dbDel('notes',id);cargarNotas();}
+
+// ── DICTADO ────────────────────────────────────────────
+let recognition=null,escuchando=false,ultimaFuente='texto';
+function toggleDictado(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('mic-status').textContent='Tu navegador no soporta dictado.';return;}
+  if(escuchando){recognition.stop();return;}
+  recognition=new SR();
+  recognition.lang='es-ES';recognition.interimResults=true;recognition.continuous=true;
+  const btn=document.getElementById('btn-mic'),status=document.getElementById('mic-status'),input=document.getElementById('note-input');
+  const base=input.value.trim();
+  recognition.onstart=()=>{escuchando=true;btn.classList.add('recording');status.textContent='Escuchando…';};
+  recognition.onresult=e=>{
+    let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    input.value=(base?base+' ':'')+t;autoGrow(input);ultimaFuente='voz';
+  };
+  recognition.onerror=()=>{status.textContent='No se ha podido escuchar. Inténtalo de nuevo.';};
+  recognition.onend=()=>{escuchando=false;btn.classList.remove('recording');status.textContent='Listo. Revisa y guarda.';};
+  recognition.start();
+}
+
+// ── BÚSQUEDA ────────────────────────────────────────────
+async function buscar(q){
+  const cont=document.getElementById('search-results');
+  const term=q.trim();
+  if(!term){cont.innerHTML='';return;}
+  const notas=await dbGetAll('notes');
+  const t=normaliza(term);
+  const res=notas.filter(n=>normaliza(n.text).includes(t)).sort((a,b)=>b.createdAt-a.createdAt);
+  if(!res.length){cont.innerHTML='<div class="no-result">Nada encontrado en tus notas.</div>';return;}
+  cont.innerHTML=res.map(n=>`
+    <div class="result-card">
+      <span class="result-date">${fechaBonita(n.createdAt)}</span>
+      ${esc(n.text)}
+    </div>`).join('');
+}
+
+// ── INIT ───────────────────────────────────────────────
+renderModulos();
+openDB().then(cargarNotas);
+window.addEventListener('keydown',e=>{if(e.key==='Escape')cerrarModulo();});
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
