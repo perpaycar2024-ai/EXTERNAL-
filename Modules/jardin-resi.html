@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2e3328">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jardín Resi">
+<link rel="manifest" href="manifest.json">
+<title>Jardín Residencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Josefin+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --oliva:         #4a5240;
+  --oliva-dark:    #2e3328;
+  --oliva-mid:     #5e6b52;
+  --oliva-light:   #7a8c6a;
+  --oliva-pale:    #b8c4a8;
+  --crema:         #c8ddb0;
+  --dorado:        #d4a843;
+  --alerta:        #e8a090;
+  --urgente-bg:    rgba(210,50,50,0.2);
+  --urgente-borde: #e05050;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Josefin Sans', sans-serif;
+  background: var(--oliva);
+  color: var(--crema);
+  min-height: 100vh;
+  padding-bottom: 5rem;
+  background-image:
+    radial-gradient(ellipse at 15% 20%, rgba(90,110,70,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(30,40,20,0.35) 0%, transparent 50%);
+}
+
+header {
+  background: var(--oliva-dark);
+  padding: 1.1rem 1.2rem 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-texto h1 {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--crema);
+  font-style: italic;
+}
+
+.header-texto p {
+  font-size: 0.6rem;
+  color: var(--oliva-pale);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-weight: 300;
+}
+
+.btn-nueva-zona {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--crema);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.btn-nueva-zona:active { background: rgba(255,255,255,0.2); }
+
+.main-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem 0.9rem;
+}
+
+/* ZONA CARD */
+.zona-card {
+  border-radius: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.zona-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(46,51,40,0.8);
+  backdrop-filter: blur(4px);
+  transition: filter 0.15s;
+}
+.zona-header:active { filter: brightness(1.1); }
+
+.zona-nombre {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--crema);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zona-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zona-stats {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.stat-badge {
+  background: rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--oliva-pale);
+}
+.stat-badge.warn { background: rgba(232,160,144,0.22); color: var(--alerta); }
+
+.btn-zona-accion {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+.btn-zona-accion:active { color: rgba(255,255,255,0.7); }
+.btn-zona-accion.del:active { color: var(--alerta); }
+
+.chevron {
+  transition: transform 0.3s;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  margin-left: 2px;
+}
+.chevron.open { transform: rotate(180deg); }
+
+.zona-body {
+  display: none;
+  padding: 10px;
+  background: rgba(55,65,42,0.65);
+  backdrop-filter: blur(4px);
+}
+.zona-body.open { display: block; }
+
+/* SUBZONA */
+.btn-add-subzona {
+  width: 100%;
+  padding: 8px;
+  border: 1.5px dashed rgba(255,255,255,0.18);
+  background: transparent;
+  color: var(--oliva-pale);
+  border-radius: 8px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+.btn-add-subzona:active { background: rgba(255,255,255,0.06); }
+
+.subzona-card {
+  border-radius: 9px;
+  margin-bottom: 7px;
+  border: 1px solid rgba(255,255,255,0.09);
+  overflow: hidden;
+  background: rgba(40,48,30,0.55);
+}
+
+.subzona-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.subzona-header:active { background: rgba(255,255,255,0.05); }
+
+.subzona-nombre {
+  font-weight: 700;
+  font-size: 0.87rem;
+  color: var(--crema);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.02em;
+}
+
+.subzona-acciones {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 5px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.35);
+  transition: background 0.15s;
+}
+.btn-icon:active { background: rgba(255,255,255,0.08); color: var(--crema); }
+
+.subzona-body {
+  display: none;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.subzona-body.open { display: block; }
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 10px;
+  background: rgba(0,0,0,0.22);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  color: var(--oliva-pale);
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: var(--oliva-dark);
+  color: var(--crema);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* HORARIOS */
+.temporada-section { margin-bottom: 10px; }
+
+.temporada-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 0.78rem;
+  color: var(--dorado);
+  margin-bottom: 5px;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.horario-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  border-left: 2px solid var(--dorado);
+}
+
+.horario-time { color: var(--crema); font-weight: 700; font-size: 0.9rem; }
+.horario-inicio { font-size: 0.72rem; color: var(--oliva-pale); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1px; }
+.horario-duracion { font-size: 0.8rem; color: var(--dorado); font-weight: 700; margin-top: 2px; }
+.horario-dias { color: var(--oliva-pale); font-size: 0.75rem; margin-top: 3px; font-weight: 600; }
+
+.btn-add-horario {
+  width: 100%;
+  padding: 6px;
+  border: 1px dashed rgba(212,168,67,0.3);
+  background: transparent;
+  color: var(--dorado);
+  border-radius: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  opacity: 0.75;
+  letter-spacing: 0.03em;
+}
+.btn-add-horario:active { background: rgba(212,168,67,0.1); opacity: 1; }
+
+/* INCIDENCIAS */
+.incidencia-item {
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border-left: 2px solid var(--dorado);
+}
+.incidencia-item.urgente {
+  border-left-color: var(--urgente-borde);
+  border-left-width: 3px;
+  background: var(--urgente-bg);
+}
+
+.incidencia-fecha {
+  font-size: 0.75rem;
+  color: var(--crema);
+  margin-bottom: 4px;
+  font-style: italic;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.incidencia-item.urgente .incidencia-fecha::after { content: ' 🔴'; }
+.incidencia-item.urgente .incidencia-texto { color: #ffb4b4; font-weight: 600; }
+.urgente-badge { display: inline-block; background: var(--urgente-borde); color: white; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; text-transform: uppercase; }
+
+.incidencia-texto {
+  font-size: 0.87rem;
+  line-height: 1.4;
+  color: var(--crema);
+}
+
+.form-nueva-incidencia { margin-top: 8px; }
+
+.textarea-incidencia {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid rgba(255,255,255,0.14);
+  border-radius: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 65px;
+  background: rgba(0,0,0,0.2);
+  color: var(--crema);
+  transition: border-color 0.2s;
+}
+.textarea-incidencia::placeholder { color: rgba(184,196,168,0.38); }
+.textarea-incidencia:focus { outline: none; border-color: rgba(255,255,255,0.35); }
+
+.incidencia-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.check-urgente {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: var(--oliva-pale);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--oliva-pale);
+  font-style: italic;
+  font-size: 0.8rem;
+  padding: 10px 0;
+}
+
+/* BOTONES */
+.btn-primary {
+  padding: 7px 16px;
+  background: rgba(255,255,255,0.14);
+  color: var(--crema);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.03em;
+}
+.btn-primary:active { background: rgba(255,255,255,0.24); }
+
+.btn-secondary {
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--oliva-pale);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 6px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:active { background: rgba(255,255,255,0.07); }
+
+/* MODALES */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,18,8,0.72);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--oliva-dark);
+  border-radius: 18px 18px 0 0;
+  padding: 20px;
+  width: 100%;
+  max-width: 600px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom: none;
+  animation: slideUp 0.25s cubic-bezier(.34,1.4,.64,1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.modal-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1.1rem;
+  color: var(--crema);
+  margin-bottom: 14px;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.form-group { margin-bottom: 12px; }
+
+.form-label {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--oliva-pale);
+  margin-bottom: 5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1.5px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.9rem;
+  background: rgba(0,0,0,0.25);
+  color: var(--crema);
+  transition: border-color 0.2s;
+}
+.form-input::placeholder { color: rgba(184,196,168,0.38); }
+.form-input:focus, .form-select:focus { outline: none; border-color: rgba(255,255,255,0.38); }
+.form-select option { background: var(--oliva-dark); color: var(--crema); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.dia-btn {
+  padding: 7px 2px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.2);
+  color: var(--oliva-pale);
+  border-radius: 5px;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.dia-btn.selected {
+  background: var(--oliva-mid);
+  color: var(--crema);
+  border-color: var(--oliva-light);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-texto">
+    <h1>🌿 Jardín Residencia</h1>
+    <p>riegos · horarios · incidencias</p>
+  </div>
+  <button class="btn-nueva-zona" onclick="abrirModal('modalMenu')">⚙️ Menú</button>
+</header>
+
+<!-- Modal menú -->
+<div class="modal-overlay" id="modalMenu">
+  <div class="modal">
+    <div class="modal-title">⚙️ Opciones</div>
+    <button class="btn-primary" style="width:100%;margin-bottom:10px;padding:14px;" onclick="cerrarModal('modalMenu');abrirModalNuevaZona()">🌿 Nueva zona</button>
+    <button class="btn-primary" style="width:100%;margin-bottom:10px;padding:14px;" onclick="cerrarModal('modalMenu');exportarBackup()">⬇️ Exportar backup</button>
+    <label class="btn-primary" style="width:100%;padding:14px;display:block;text-align:center;cursor:pointer;">⬆️ Restaurar backup<input type="file" accept=".json" style="display:none" onchange="importarBackup(this)"></label>
+    <button class="btn-secondary" style="width:100%;margin-top:14px;" onclick="cerrarModal('modalMenu')">Cerrar</button>
+  </div>
+</div>
+
+<div class="main-container" id="app"></div>
+
+<!-- Modal subzona -->
+<div class="modal-overlay" id="modalSubzona">
+  <div class="modal">
+    <div class="modal-title">Nueva subzona</div>
+    <div class="form-group">
+      <label class="form-label">Nombre de la subzona</label>
+      <input type="text" class="form-input" id="inputSubzonaNombre" placeholder="Ej: Rosales entrada derecha">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal('modalSubzona')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarSubzona()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal horario -->
+<div class="modal-overlay" id="modalHorario">
+  <div class="modal">
+    <div class="modal-title">Nuevo horario</div>
+    <div class="form-group">
+      <label class="form-label">Temporada</label>
+      <select class="form-select" id="selectTemporada">
+        <option value="verano">☀️ Verano</option>
+        <option value="invierno">❄️ Invierno</option>
+        <option value="entretiempo">🍂 Entretiempo</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hora de inicio</label>
+      <input type="time" class="form-input" id="inputHoraHorario">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Duración del riego (minutos)</label>
+      <input type="number" class="form-input" id="inputDuracion" min="1" max="999" placeholder="Ej: 20">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Días</label>
+      <div class="dias-grid">
+        <button class="dia-btn" data-dia="L">L</button>
+        <button class="dia-btn" data-dia="M">M</button>
+        <button class="dia-btn" data-dia="X">X</button>
+        <button class="dia-btn" data-dia="J">J</button>
+        <button class="dia-btn" data-dia="V">V</button>
+        <button class="dia-btn" data-dia="S">S</button>
+        <button class="dia-btn" data-dia="D">D</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal('modalHorario')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarHorario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar subzona -->
+<div class="modal-overlay" id="modalEditarSubzona">
+  <div class="modal">
+    <div class="modal-title">Editar subzona</div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-input" id="inputEditarNombre">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal('modalEditarSubzona')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarEdicionSubzona()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nueva zona -->
+<div class="modal-overlay" id="modalNuevaZona">
+  <div class="modal">
+    <div class="modal-title">Nueva zona</div>
+    <div class="form-group">
+      <label class="form-label">Nombre de la zona</label>
+      <input type="text" class="form-input" id="inputNuevaZonaNombre" placeholder="Ej: Patio trasero, Pérgola…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icono</label>
+      <select class="form-select" id="selectNuevaZonaIcono">
+        <option value="🌿">🌿 Planta</option>
+        <option value="🌸">🌸 Flor</option>
+        <option value="🌳">🌳 Árbol</option>
+        <option value="🌵">🌵 Cactus</option>
+        <option value="🍃">🍃 Hoja</option>
+        <option value="🌺">🌺 Flor tropical</option>
+        <option value="🌻">🌻 Girasol</option>
+        <option value="🪴">🪴 Maceta</option>
+        <option value="🌱">🌱 Brote</option>
+        <option value="🍀">🍀 Trébol</option>
+        <option value="🚪">🚪 Entrada</option>
+        <option value="⛪">⛪ Gruta</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal('modalNuevaZona')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarNuevaZona()">Crear zona</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar zona -->
+<div class="modal-overlay" id="modalEditarZona">
+  <div class="modal">
+    <div class="modal-title">Editar zona</div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-input" id="inputEditarZonaNombre">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icono</label>
+      <select class="form-select" id="selectEditarZonaIcono">
+        <option value="🌿">🌿 Planta</option>
+        <option value="🌸">🌸 Flor</option>
+        <option value="🌳">🌳 Árbol</option>
+        <option value="🌵">🌵 Cactus</option>
+        <option value="🍃">🍃 Hoja</option>
+        <option value="🌺">🌺 Flor tropical</option>
+        <option value="🌻">🌻 Girasol</option>
+        <option value="🪴">🪴 Maceta</option>
+        <option value="🌱">🌱 Brote</option>
+        <option value="🍀">🍀 Trébol</option>
+        <option value="🚪">🚪 Entrada</option>
+        <option value="⛪">⛪ Gruta</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal('modalEditarZona')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarEdicionZona()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jardin_residencia_v2';
+
+const ZONAS_BASE = [
+  { id:'entrada',       nombre:'Entrada',                 icono:'🚪' },
+  { id:'gruta',         nombre:'Gruta',                   icono:'⛪' },
+  { id:'cocina',        nombre:'Cocina',                  icono:'🌿' },
+  { id:'int_hombres',   nombre:'Interior Hombres',        icono:'🌱' },
+  { id:'int_mujeres',   nombre:'Interior Mujeres',        icono:'🌸' },
+  { id:'trach_hombres', nombre:'Trachelospermum Hombres', icono:'🍃' },
+];
+
+function cargarEstado() {
+  const guardado = localStorage.getItem(STORAGE_KEY);
+  if (guardado) return JSON.parse(guardado);
+
+  // Migrar datos de v1 si existen
+  const v1 = localStorage.getItem('jardin_residencia_v1');
+  const datosV1 = v1 ? JSON.parse(v1) : {};
+
+  const zonas = ZONAS_BASE.map(z => ({
+    id: z.id,
+    nombre: z.nombre,
+    icono: z.icono,
+    subzonas: datosV1[z.id]?.subzonas || []
+  }));
+
+  return { zonas };
+}
+
+let estado = cargarEstado();
+function guardarEstado() { localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); }
+
+function formatFecha(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+let ctxZonaId = null;
+let ctxHorarioZona = null, ctxHorarioSubzona = null;
+let ctxEditarZona = null, ctxEditarSubzona = null;
+let ctxEditarZonaId = null;
+
+// ===== RENDER =====
+function render() {
+  // Guardar qué está abierto antes de re-renderizar
+  const zonasAbiertas = new Set();
+  const subzonasAbiertas = new Set();
+  const tabsActivos = {};
+  document.querySelectorAll('.zona-body.open').forEach(el => zonasAbiertas.add(el.id.replace('body_','')));
+  document.querySelectorAll('.subzona-body.open').forEach(el => subzonasAbiertas.add(el.id.replace('body_sz_','')));
+  document.querySelectorAll('.subzona-body.open').forEach(sb => {
+    const szId = sb.id.replace('body_sz_','');
+    const activeTab = sb.querySelector('.tab-btn.active');
+    if (activeTab) {
+      const onclick = activeTab.getAttribute('onclick') || '';
+      const match = onclick.match(/'horarios'|'incidencias'/);
+      if (match) tabsActivos[szId] = match[0].replace(/'/g,'');
+    }
+  });
+
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  estado.zonas.forEach(zona => app.appendChild(renderZona(zona)));
+
+  // Restaurar estado abierto
+  zonasAbiertas.forEach(id => {
+    const body = document.getElementById(`body_${id}`);
+    const chevron = document.getElementById(`chevron_${id}`);
+    if (body) { body.classList.add('open'); }
+    if (chevron) { chevron.classList.add('open'); }
+  });
+  subzonasAbiertas.forEach(id => {
+    const body = document.getElementById(`body_sz_${id}`);
+    const chevron = document.getElementById(`chevron_sz_${id}`);
+    if (body) { body.classList.add('open'); }
+    if (chevron) { chevron.classList.add('open'); }
+    // Restaurar pestaña activa
+    if (tabsActivos[id] && body) {
+      const tabPanel = document.getElementById(`tab_${tabsActivos[id]}_${id}`);
+      const tabBtns = body.querySelectorAll('.tab-btn');
+      body.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tabBtns.forEach(b => {
+        b.classList.remove('active');
+        if (b.getAttribute('onclick')?.includes(`'${tabsActivos[id]}'`)) b.classList.add('active');
+      });
+      if (tabPanel) tabPanel.classList.add('active');
+    }
+  });
+}
+
+function renderZona(zona) {
+  const card = document.createElement('div');
+  card.className = 'zona-card';
+  const numSubzonas = zona.subzonas.length;
+  const numInc = zona.subzonas.reduce((a, s) => a + (s.incidencias?.length||0), 0);
+
+  card.innerHTML = `
+    <div class="zona-header" onclick="toggleZona('${zona.id}')">
+      <div class="zona-nombre">${zona.icono} ${zona.nombre}</div>
+      <div class="zona-header-right">
+        <div class="zona-stats">
+          <span class="stat-badge">🌱 ${numSubzonas}</span>
+          ${numInc > 0 ? `<span class="stat-badge warn">⚠️ ${numInc}</span>` : ''}
+        </div>
+        <button class="btn-zona-accion" onclick="event.stopPropagation();abrirEditarZona('${zona.id}')" title="Editar">✏️</button>
+        <button class="btn-zona-accion del" onclick="event.stopPropagation();eliminarZona('${zona.id}')" title="Eliminar">✕</button>
+        <span class="chevron" id="chevron_${zona.id}">▼</span>
+      </div>
+    </div>
+    <div class="zona-body" id="body_${zona.id}">
+      <button class="btn-add-subzona" onclick="abrirModalSubzona('${zona.id}')">+ Añadir subzona</button>
+      <div id="subzonas_${zona.id}"></div>
+    </div>`;
+
+  const cont = card.querySelector(`#subzonas_${zona.id}`);
+  zona.subzonas.forEach(sz => cont.appendChild(renderSubzona(zona.id, sz)));
+  return card;
+}
+
+function renderSubzona(zonaId, sz) {
+  const card = document.createElement('div');
+  card.className = 'subzona-card';
+  const numInc = sz.incidencias?.length || 0;
+  const numH = contarHorarios(sz.horarios);
+
+  card.innerHTML = `
+    <div class="subzona-header" onclick="toggleSubzona('${zonaId}','${sz.id}')">
+      <div class="subzona-nombre">
+        🌿 ${sz.nombre}
+        ${numInc > 0 ? `<span style="font-size:0.68rem;color:var(--alerta);font-weight:700;">(${numInc})</span>` : ''}
+      </div>
+      <div class="subzona-acciones">
+        <span style="font-size:0.66rem;color:var(--oliva-pale);font-weight:700;">⏰${numH}</span>
+        <button class="btn-icon" onclick="event.stopPropagation();abrirEditarSubzona('${zonaId}','${sz.id}')">✏️</button>
+        <button class="btn-icon" onclick="event.stopPropagation();eliminarSubzona('${zonaId}','${sz.id}')">🗑️</button>
+        <span class="chevron" id="chevron_sz_${sz.id}">▼</span>
+      </div>
+    </div>
+    <div class="subzona-body" id="body_sz_${sz.id}">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('${sz.id}','horarios',this)">⏰ Horarios</button>
+        <button class="tab-btn" onclick="switchTab('${sz.id}','incidencias',this)">⚠️ Incidencias</button>
+      </div>
+      <div class="tab-panel active" id="tab_horarios_${sz.id}">${renderHorarios(zonaId, sz)}</div>
+      <div class="tab-panel" id="tab_incidencias_${sz.id}">${renderIncidencias(zonaId, sz)}</div>
+    </div>`;
+  return card;
+}
+
+function contarHorarios(h) {
+  if (!h) return 0;
+  return (h.verano?.length||0) + (h.invierno?.length||0) + (h.entretiempo?.length||0);
+}
+
+function renderHorarios(zonaId, sz) {
+  const h = sz.horarios || { verano:[], invierno:[], entretiempo:[] };
+  const temps = [
+    { key:'verano', label:'☀️ Verano' },
+    { key:'invierno', label:'❄️ Invierno' },
+    { key:'entretiempo', label:'🍂 Entretiempo' },
+  ];
+  let html = '';
+  temps.forEach(t => {
+    const lista = h[t.key] || [];
+    html += `<div class="temporada-section"><div class="temporada-title">${t.label}</div>`;
+    if (!lista.length) {
+      html += `<div class="empty-state">Sin horarios</div>`;
+    } else {
+      lista.forEach((hr, idx) => {
+        html += `<div class="horario-item">
+          <div style="flex:1">
+            <div class="horario-inicio">🕐 Inicio</div>
+            <div class="horario-time">${hr.hora}</div>
+            ${hr.duracion ? `<div class="horario-duracion">⏱ ${hr.duracion} min de riego</div>` : ''}
+            <div class="horario-dias">${hr.dias?.join(' · ') || 'Todos los días'}</div>
+          </div>
+          <button class="btn-icon" onclick="eliminarHorario('${zonaId}','${sz.id}','${t.key}',${idx})">🗑️</button>
+        </div>`;
+      });
+    }
+    html += `<button class="btn-add-horario" onclick="abrirModalHorario('${zonaId}','${sz.id}','${t.key}')">+ Horario ${t.label.split(' ')[1]}</button></div>`;
+  });
+  return html;
+}
+
+function renderIncidencias(zonaId, sz) {
+  const lista = sz.incidencias || [];
+  let html = '';
+  if (!lista.length) {
+    html += `<div class="empty-state">Sin incidencias registradas</div>`;
+  } else {
+    // Urgentes siempre primero
+    const urgentes = lista.map((inc,i) => ({inc,i})).filter(x => x.inc.urgente);
+    const normales = lista.map((inc,i) => ({inc,i})).filter(x => !x.inc.urgente);
+    [...urgentes.reverse(), ...normales.reverse()].forEach(({inc, i}) => {
+      html += `<div class="incidencia-item ${inc.urgente?'urgente':''}">
+        <div class="incidencia-fecha">${formatFecha(inc.fecha)}${inc.urgente ? '<span class="urgente-badge">urgente</span>' : ''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div class="incidencia-texto">${inc.texto}</div>
+          <button class="btn-icon" style="flex-shrink:0;" onclick="eliminarIncidencia('${zonaId}','${sz.id}',${i})">🗑️</button>
+        </div>
+      </div>`;
+    });
+  }
+  html += `<div class="form-nueva-incidencia">
+    <textarea class="textarea-incidencia" id="txt_inc_${sz.id}" placeholder="Escribe una incidencia o nota..."></textarea>
+    <div class="incidencia-footer">
+      <label class="check-urgente"><input type="checkbox" id="chk_urgente_${sz.id}"> 🔴 Urgente</label>
+      <button class="btn-primary" onclick="guardarIncidencia('${zonaId}','${sz.id}')">Guardar</button>
+    </div>
+  </div>`;
+  return html;
+}
+
+// ===== TOGGLE =====
+function toggleZona(id) {
+  document.getElementById(`body_${id}`).classList.toggle('open');
+  document.getElementById(`chevron_${id}`).classList.toggle('open');
+}
+function toggleSubzona(zonaId, szId) {
+  document.getElementById(`body_sz_${szId}`).classList.toggle('open');
+  document.getElementById(`chevron_sz_${szId}`).classList.toggle('open');
+}
+function switchTab(szId, tab, btn) {
+  const parent = btn.closest('.subzona-body');
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  parent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`tab_${tab}_${szId}`).classList.add('active');
+}
+
+// ===== ZONAS =====
+function abrirModalNuevaZona() {
+  document.getElementById('inputNuevaZonaNombre').value = '';
+  document.getElementById('selectNuevaZonaIcono').value = '🌿';
+  abrirModal('modalNuevaZona');
+}
+function guardarNuevaZona() {
+  const nombre = document.getElementById('inputNuevaZonaNombre').value.trim();
+  if (!nombre) return;
+  const icono = document.getElementById('selectNuevaZonaIcono').value;
+  estado.zonas.push({ id:'zona_'+Date.now(), nombre, icono, subzonas:[] });
+  guardarEstado(); cerrarModal('modalNuevaZona'); render();
+}
+function eliminarZona(id) {
+  const z = estado.zonas.find(z => z.id === id);
+  if (!confirm(`¿Eliminar la zona "${z.nombre}" y todos sus datos?`)) return;
+  estado.zonas = estado.zonas.filter(z => z.id !== id);
+  guardarEstado(); render();
+}
+function abrirEditarZona(id) {
+  ctxEditarZonaId = id;
+  const z = estado.zonas.find(z => z.id === id);
+  document.getElementById('inputEditarZonaNombre').value = z.nombre;
+  document.getElementById('selectEditarZonaIcono').value = z.icono;
+  abrirModal('modalEditarZona');
+}
+function guardarEdicionZona() {
+  const nombre = document.getElementById('inputEditarZonaNombre').value.trim();
+  if (!nombre) return;
+  const z = estado.zonas.find(z => z.id === ctxEditarZonaId);
+  z.nombre = nombre;
+  z.icono = document.getElementById('selectEditarZonaIcono').value;
+  guardarEstado(); cerrarModal('modalEditarZona'); render();
+}
+
+// ===== SUBZONAS =====
+function abrirModalSubzona(zonaId) {
+  ctxZonaId = zonaId;
+  document.getElementById('inputSubzonaNombre').value = '';
+  abrirModal('modalSubzona');
+}
+function guardarSubzona() {
+  const nombre = document.getElementById('inputSubzonaNombre').value.trim();
+  if (!nombre) return;
+  const zona = estado.zonas.find(z => z.id === ctxZonaId);
+  zona.subzonas.push({ id:'sz_'+Date.now(), nombre, horarios:{verano:[],invierno:[],entretiempo:[]}, incidencias:[] });
+  guardarEstado(); cerrarModal('modalSubzona'); render();
+}
+function eliminarSubzona(zonaId, szId) {
+  if (!confirm('¿Eliminar esta subzona y todos sus datos?')) return;
+  const zona = estado.zonas.find(z => z.id === zonaId);
+  zona.subzonas = zona.subzonas.filter(s => s.id !== szId);
+  guardarEstado(); render();
+}
+function abrirEditarSubzona(zonaId, szId) {
+  ctxEditarZona = zonaId; ctxEditarSubzona = szId;
+  const zona = estado.zonas.find(z => z.id === zonaId);
+  document.getElementById('inputEditarNombre').value = zona.subzonas.find(s => s.id === szId).nombre;
+  abrirModal('modalEditarSubzona');
+}
+function guardarEdicionSubzona() {
+  const nombre = document.getElementById('inputEditarNombre').value.trim();
+  if (!nombre) return;
+  const zona = estado.zonas.find(z => z.id === ctxEditarZona);
+  zona.subzonas.find(s => s.id === ctxEditarSubzona).nombre = nombre;
+  guardarEstado(); cerrarModal('modalEditarSubzona'); render();
+}
+
+// ===== HORARIOS =====
+function abrirModalHorario(zonaId, szId, temporada) {
+  ctxHorarioZona = zonaId; ctxHorarioSubzona = szId;
+  document.getElementById('selectTemporada').value = temporada;
+  document.getElementById('inputHoraHorario').value = '';
+  document.getElementById('inputDuracion').value = '';
+  document.querySelectorAll('.dia-btn').forEach(b => b.classList.remove('selected'));
+  abrirModal('modalHorario');
+}
+document.querySelectorAll('.dia-btn').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('selected'));
+});
+function guardarHorario() {
+  const hora = document.getElementById('inputHoraHorario').value;
+  if (!hora) return;
+  const duracion = parseInt(document.getElementById('inputDuracion').value) || null;
+  const temporada = document.getElementById('selectTemporada').value;
+  const dias = [...document.querySelectorAll('.dia-btn.selected')].map(b => b.dataset.dia);
+  const zona = estado.zonas.find(z => z.id === ctxHorarioZona);
+  const sz = zona.subzonas.find(s => s.id === ctxHorarioSubzona);
+  if (!sz.horarios) sz.horarios = { verano:[], invierno:[], entretiempo:[] };
+  sz.horarios[temporada].push({ hora, duracion, dias });
+  guardarEstado(); cerrarModal('modalHorario'); render();
+}
+function eliminarHorario(zonaId, szId, temporada, idx) {
+  const zona = estado.zonas.find(z => z.id === zonaId);
+  zona.subzonas.find(s => s.id === szId).horarios[temporada].splice(idx, 1);
+  guardarEstado(); render();
+}
+
+// ===== INCIDENCIAS =====
+function guardarIncidencia(zonaId, szId) {
+  const txt = document.getElementById(`txt_inc_${szId}`).value.trim();
+  if (!txt) return;
+  const urgente = document.getElementById(`chk_urgente_${szId}`).checked;
+  const zona = estado.zonas.find(z => z.id === zonaId);
+  const sz = zona.subzonas.find(s => s.id === szId);
+  if (!sz.incidencias) sz.incidencias = [];
+  sz.incidencias.push({ texto:txt, fecha:Date.now(), urgente });
+  guardarEstado(); render();
+}
+function eliminarIncidencia(zonaId, szId, idx) {
+  if (!confirm('¿Eliminar esta incidencia?')) return;
+  const zona = estado.zonas.find(z => z.id === zonaId);
+  zona.subzonas.find(s => s.id === szId).incidencias.splice(idx, 1);
+  guardarEstado(); render();
+}
+
+// ===== MODALES =====
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ===== BACKUP =====
+function exportarBackup() {
+  const backup = { fecha: new Date().toISOString(), version: STORAGE_KEY, datos: estado };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jardin-resi-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (!backup.datos?.zonas) { alert('❌ Archivo no válido'); return; }
+      if (!confirm('¿Restaurar backup? Se sobreescribirán todos los datos actuales.')) return;
+      estado = backup.datos;
+      guardarEstado();
+      render();
+      alert('✅ Backup restaurado correctamente');
+    } catch { alert('❌ Error al leer el archivo'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+render();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
