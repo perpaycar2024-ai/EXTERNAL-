@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tareas</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tareas">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1b2d; --bg2: #152338; --bg3: #1c2f47;
+    --card: #1a2d45; --card2: #213450;
+    --border: #2a4060; --border2: #3a5070;
+    --accent: #4a9eff; --accent2: #7bbfff;
+    --text: #e8f0fe; --text2: #c8d8f0; --text3: #8aaccc;   /* ← subidos de tono */
+    --done: #2a5a3a; --done-text: #6fcf97;
+    --warn: #f39c12; --urgent: #e74c3c;
+    --radius: 14px; --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(74,158,255,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 90%, rgba(123,191,255,0.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  #app { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 0 0 80px; }
+
+  /* HEADER */
+  .header { padding: 28px 20px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--text); letter-spacing: -0.5px; }
+  .header-title span { color: var(--accent); }
+  .header-sub { font-size: 0.82rem; color: var(--text3); margin-top: 2px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .btn-new-folder {
+    background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
+    padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.85rem;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s, transform 0.1s;
+  }
+  .btn-new-folder:hover { background: var(--accent2); color: var(--bg); }
+  .btn-new-folder:active { transform: scale(0.97); }
+  .btn-backup {
+    background: var(--bg3); color: var(--text2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.85rem;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+  .btn-backup:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* CARPETAS */
+  .folders-grid { padding: 0 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; }
+  .folder-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 14px; cursor: pointer; position: relative; overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+  .folder-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--folder-color, var(--accent)); border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .folder-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .folder-card.has-urgent { border-color: rgba(231,76,60,0.5); }
+  .folder-card.has-urgent::before { background: var(--urgent); }
+  .folder-emoji { font-size: 1.8rem; margin-bottom: 8px; display: block; }
+  .folder-name { font-weight: 600; font-size: 0.92rem; color: var(--text); word-break: break-word; }
+  .folder-count { margin-top: 6px; font-size: 0.78rem; color: var(--text3); }
+  .folder-count b { color: var(--accent2); }
+  .folder-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; opacity: 0; transition: opacity 0.2s; }
+  .folder-card:hover .folder-card-actions { opacity: 1; }
+
+  /* badges carpeta */
+  .badge-today { display: inline-block; background: rgba(243,156,18,0.2); color: var(--warn); font-size: 0.72rem; padding: 2px 7px; border-radius: 20px; border: 1px solid rgba(243,156,18,0.4); font-weight: 600; margin-left: 4px; }
+  .badge-urgent { display: inline-block; background: rgba(231,76,60,0.18); color: #ff6b6b; font-size: 0.72rem; padding: 2px 7px; border-radius: 20px; border: 1px solid rgba(231,76,60,0.4); font-weight: 600; margin-left: 4px; }
+
+  /* DETALLE CARPETA */
+  .back-btn { display: flex; align-items: center; gap: 8px; background: none; border: none; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px 0 16px; transition: color 0.2s; }
+  .back-btn:hover { color: var(--accent); }
+  .folder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .folder-header-left { display: flex; align-items: center; gap: 12px; }
+  .folder-header-emoji { font-size: 2rem; }
+  .folder-header-name { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--text); }
+  .tabs { display: flex; gap: 4px; background: var(--bg2); padding: 4px; border-radius: var(--radius-sm); margin-bottom: 20px; }
+  .tab { flex: 1; padding: 8px; text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text3); cursor: pointer; border-radius: 6px; transition: background 0.2s, color 0.2s; border: none; background: none; font-family: 'DM Sans', sans-serif; }
+  .tab.active { background: var(--card2); color: var(--accent); }
+
+  /* BOTÓN NUEVA TAREA */
+  .btn-add-task { width: 100%; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); padding: 14px; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+  .btn-add-task:hover { border-color: var(--accent); color: var(--accent); background: var(--card); }
+
+  /* TARJETAS TAREA */
+  .tasks-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; transition: border-color 0.2s; animation: slideIn 0.25s ease; }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  .task-card.done { background: rgba(42,90,58,0.15); border-color: var(--done); opacity: 0.8; }
+  .task-card.urgent { border-color: rgba(231,76,60,0.5); background: rgba(231,76,60,0.05); }
+  .task-check { width: 22px; height: 22px; border: 2px solid var(--border2); border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s, background 0.2s; margin-top: 1px; }
+  .task-check:hover { border-color: var(--accent); }
+  .task-card.done .task-check { background: var(--done); border-color: var(--done); color: var(--done-text); }
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-weight: 500; font-size: 0.95rem; color: var(--text); margin-bottom: 4px; word-break: break-word; }
+  .task-card.done .task-title { text-decoration: line-through; color: var(--text3); }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 2px; }
+  .task-date { font-size: 0.78rem; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+  .task-date.overdue { color: #ff6b6b; font-weight: 600; }
+  .task-date.soon { color: var(--warn); font-weight: 600; }
+  .task-date.today { color: var(--warn); font-weight: 600; }
+  .task-notes { font-size: 0.82rem; color: var(--text2); margin-top: 6px; padding: 8px 10px; background: var(--bg2); border-radius: 6px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+  .task-custom-data { margin-top: 6px; display: flex; flex-direction: column; gap: 5px; }
+  .task-custom-item { font-size: 0.82rem; color: var(--text2); }
+  .task-custom-item b { color: var(--accent2); font-weight: 600; }
+  .task-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .btn-icon { background: none; border: none; cursor: pointer; color: var(--text3); padding: 4px; border-radius: 6px; font-size: 1rem; transition: color 0.2s, background 0.2s; line-height: 1; }
+  .btn-icon:hover { color: var(--accent); background: var(--bg3); }
+  .btn-icon.del:hover { color: #e74c3c; }
+
+  /* LISTA DE COMPRA — vista */
+  .shop-list-card { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .shop-store-block { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .shop-store-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg3); border-bottom: 1px solid var(--border); }
+  .shop-store-name { font-weight: 600; font-size: 0.87rem; color: var(--accent2); }
+  .shop-store-count { font-size: 0.75rem; color: var(--text3); margin-left: auto; }
+  .shop-items { padding: 8px 12px; display: flex; flex-direction: column; gap: 5px; }
+  .shop-item { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text2); padding: 3px 0; }
+  .shop-item-check { width: 16px; height: 16px; border: 1.5px solid var(--border2); border-radius: 4px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; transition: background 0.15s, border-color 0.15s; }
+  .shop-item-check.checked { background: var(--done); border-color: var(--done); color: var(--done-text); }
+  .shop-item-name { flex: 1; }
+  .shop-item-name.checked-text { text-decoration: line-through; opacity: 0.5; }
+  .shop-item-qty { font-size: 0.78rem; font-weight: 600; color: var(--accent); background: rgba(74,158,255,0.12); padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+
+  /* LISTA DE COMPRA — editor */
+  .shop-editor { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .shop-store-editor { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .shop-store-editor-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--card2); border-bottom: 1px solid var(--border); }
+  .shop-store-editor-header .form-input { flex: 1; padding: 7px 10px; font-size: 0.88rem; }
+  .shop-items-editor { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .shop-item-row { display: flex; align-items: center; gap: 6px; }
+  .shop-item-row .item-name { flex: 1; }
+  .shop-item-row .item-qty { width: 70px; text-align: center; }
+  .btn-add-item { width: 100%; margin-top: 4px; background: none; border: 1px dashed var(--border2); border-radius: 8px; padding: 7px; color: var(--text2); font-size: 0.82rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, color 0.2s; }
+  .btn-add-item:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-add-store { width: 100%; background: none; border: 1px dashed var(--border2); border-radius: 10px; padding: 10px; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; margin-top: 4px; }
+  .btn-add-store:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* HISTORIAL */
+  .history-empty { text-align: center; color: var(--text3); padding: 40px 20px; font-size: 0.92rem; }
+  .history-date-group { margin-bottom: 20px; }
+  .history-date-label { font-size: 0.77rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; padding-left: 4px; }
+
+  /* MODALES */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px 32px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.25s; }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 20px; color: var(--text); }
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 11px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; transition: border-color 0.2s; outline: none;
+  }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
+  .emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .emoji-btn { font-size: 1.4rem; padding: 6px; border-radius: 8px; border: 2px solid transparent; background: var(--bg3); cursor: pointer; transition: border-color 0.15s, transform 0.1s; line-height: 1; }
+  .emoji-btn:hover { transform: scale(1.15); }
+  .emoji-btn.selected { border-color: var(--accent); background: var(--card2); }
+  .color-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s, transform 0.1s; }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.selected { border-color: #fff; }
+  .custom-field-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .custom-field-row .form-input { flex: 1; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-primary { flex: 1; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 13px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s; }
+  .btn-primary:hover { background: var(--accent2); color: var(--bg); }
+  .btn-secondary { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 18px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+  /* BACKUP MODAL */
+  .backup-section { margin-bottom: 20px; }
+  .backup-section-title { font-size: 0.82rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .backup-info { font-size: 0.85rem; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+  .backup-btn-row { display: flex; gap: 10px; }
+  .btn-backup-action { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s, color 0.2s; border: none; }
+  .btn-export { background: var(--accent); color: #fff; }
+  .btn-export:hover { background: var(--accent2); color: var(--bg); }
+  .btn-import { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+  .btn-import:hover { border-color: var(--accent); color: var(--text); }
+  .backup-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  #restore-file-input { display: none; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state p { font-size: 0.92rem; color: var(--text2); }
+  #folders-view.hidden, #folder-detail.hidden { display: none; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="folders-view">
+    <div class="header">
+      <div>
+        <div class="header-title">mis <span>tareas</span></div>
+        <div class="header-sub" id="header-sub">0 carpetas</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-backup" onclick="openBackupModal()" title="Copia de seguridad">💾 Backup</button>
+        <button class="btn-new-folder" onclick="openFolderModal()">＋ Nueva carpeta</button>
+      </div>
+    </div>
+    <div class="folders-grid" id="folders-grid"></div>
+    <div class="empty-state" id="folders-empty" style="display:none">
+      <div class="empty-state-icon">📂</div>
+      <p>Aún no hay carpetas.<br>Crea la primera para empezar.</p>
+    </div>
+  </div>
+
+  <div id="folder-detail" class="hidden">
+    <div style="padding:16px 16px 0">
+      <button class="back-btn" onclick="goBack()">← Todas las carpetas</button>
+      <div class="folder-header">
+        <div class="folder-header-left">
+          <span class="folder-header-emoji" id="detail-emoji"></span>
+          <div>
+            <div class="folder-header-name" id="detail-name"></div>
+            <div style="font-size:0.82rem;color:var(--text3)" id="detail-stats"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-icon" onclick="editCurrentFolder()">✏️</button>
+          <button class="btn-icon del" onclick="deleteCurrentFolder()">🗑</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tab-pending" onclick="switchTab('pending')">Pendientes</button>
+        <button class="tab" id="tab-history" onclick="switchTab('history')">Historial</button>
+      </div>
+    </div>
+    <div id="tab-content-pending" style="padding:0 16px">
+      <button class="btn-add-task" onclick="openTaskModal()">＋ Nueva tarea</button>
+      <div class="tasks-list" id="tasks-list"></div>
+      <div class="empty-state" id="tasks-empty" style="display:none">
+        <div class="empty-state-icon">✅</div><p>No hay tareas pendientes.</p>
+      </div>
+    </div>
+    <div id="tab-content-history" style="padding:0 16px;display:none">
+      <div id="history-list"></div>
+      <div class="history-empty" id="history-empty" style="display:none">Aún no hay tareas completadas.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CARPETA -->
+<div class="modal-overlay" id="modal-folder">
+  <div class="modal">
+    <div class="modal-title" id="folder-modal-title">Nueva carpeta</div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input class="form-input" id="folder-name-input" placeholder="Ej: Salidas, Compras, Casa…" maxlength="40">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Emoji</label>
+      <div class="emoji-picker" id="emoji-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color de acento</label>
+      <div class="color-options" id="color-options"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Campos personalizados <span style="color:var(--text3);font-weight:400;text-transform:none">(opcionales)</span></label>
+      <div id="custom-fields-list"></div>
+      <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="addCustomField()">＋ Añadir campo</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeFolderModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveFolder()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TAREA -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title" id="task-modal-title">Nueva tarea</div>
+    <div class="form-group">
+      <label class="form-label">Título</label>
+      <input class="form-input" id="task-title-input" placeholder="¿Qué tienes pendiente?" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input class="form-input" type="date" id="task-date-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas</label>
+      <textarea class="form-textarea" id="task-notes-input" placeholder="Detalles, recordatorios…"></textarea>
+    </div>
+    <div id="task-custom-inputs"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeTaskModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveTask()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BACKUP -->
+<div class="modal-overlay" id="modal-backup">
+  <div class="modal">
+    <div class="modal-title">💾 Copia de seguridad</div>
+
+    <div class="backup-section">
+      <div class="backup-section-title">Exportar</div>
+      <p class="backup-info">Descarga un archivo JSON con todas tus carpetas y tareas. Guárdalo donde quieras.</p>
+      <div class="backup-btn-row">
+        <button class="btn-backup-action btn-export" onclick="exportBackup()">⬇ Descargar backup</button>
+      </div>
+    </div>
+
+    <hr class="backup-divider">
+
+    <div class="backup-section">
+      <div class="backup-section-title">Restaurar</div>
+      <p class="backup-info">⚠️ Esto reemplaza todos los datos actuales con los del archivo. Asegúrate de tener un backup antes.</p>
+      <div class="backup-btn-row">
+        <button class="btn-backup-action btn-import" onclick="document.getElementById('restore-file-input').click()">⬆ Cargar backup</button>
+      </div>
+      <input type="file" id="restore-file-input" accept=".json" onchange="importBackup(event)">
+    </div>
+
+    <div class="modal-actions" style="margin-top:10px">
+      <button class="btn-secondary" onclick="closeBackupModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DB (memoria compartida EXTERNAL) ────────────────────
+const DB_NAME='external_db', DB_VERSION=1;
+const ST_FOLDERS='tareas_folders', ST_TASKS='tareas_tasks';
+let db;
+function openDB() {
+  return new Promise((res,rej) => {
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=e => {
+      const d=e.target.result;
+      if (!d.objectStoreNames.contains(ST_FOLDERS)) d.createObjectStore(ST_FOLDERS,{keyPath:'id'});
+      if (!d.objectStoreNames.contains(ST_TASKS)) { const ts=d.createObjectStore(ST_TASKS,{keyPath:'id'}); ts.createIndex('folderId','folderId'); }
+      if (!d.objectStoreNames.contains('coches')) d.createObjectStore('coches',{keyPath:'id'});
+      if (!d.objectStoreNames.contains('notes')) d.createObjectStore('notes',{keyPath:'id'});
+    };
+    req.onsuccess=e=>{ db=e.target.result; res(db); };
+    req.onerror=rej;
+  });
+}
+const dbGetAll=s=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});
+const dbPut=(s,o)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).put(o);r.onsuccess=()=>res();r.onerror=rej;});
+const dbDel=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).delete(id);r.onsuccess=()=>res();r.onerror=rej;});
+const dbIdx=(s,idx,val)=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).index(idx).getAll(val);r.onsuccess=()=>res(r.result);r.onerror=rej;});
+async function dbClear(s) {
+  return new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).clear();r.onsuccess=()=>res();r.onerror=rej;});
+}
+
+// ── ESTADO ─────────────────────────────────────────────
+let folders=[], currentFolderId=null, currentTab='pending';
+let editingFolderId=null, editingTaskId=null;
+let selectedEmoji='📋', selectedColor='#4a9eff';
+let customFieldDefs=[], shopEditorData={};
+
+const EMOJIS=['📋','🛒','🚗','🏠','🌿','💊','📅','✈️','🎯','💡','🔧','📦','🎁','🏥','📚','🍽️','💪','🎵','🐾','⚡'];
+const COLORS=['#4a9eff','#7bbfff','#56d4a0','#f39c12','#e74c3c','#9b59b6','#1abc9c','#e67e22','#ec407a','#00bcd4'];
+
+// ── UTILS ──────────────────────────────────────────────
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const todayStr=()=>new Date().toISOString().slice(0,10);
+const slugify=s=>String(s).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');
+
+function isUrgent(dateStr) {
+  if (!dateStr) return false;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const d=new Date(dateStr+'T00:00:00');
+  const diff=Math.floor((d-today)/(1000*60*60*24));
+  return diff<=2; // hoy, mañana, pasado o ya vencida
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day]=d.split('-');
+  const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const today=todayStr();
+  if (d<today) return `⚠ venció el ${parseInt(day)} ${ms[parseInt(m)-1]}`;
+  if (d===today) return '🔴 hoy';
+  const tom=new Date(); tom.setDate(tom.getDate()+1);
+  const tom2=new Date(); tom2.setDate(tom2.getDate()+2);
+  if (d===tom.toISOString().slice(0,10)) return '🟠 mañana';
+  if (d===tom2.toISOString().slice(0,10)) return '🟡 pasado mañana';
+  return `${parseInt(day)} ${ms[parseInt(m)-1]} ${y}`;
+}
+
+// ── BACKUP ─────────────────────────────────────────────
+function openBackupModal() { document.getElementById('modal-backup').classList.add('open'); }
+function closeBackupModal() { document.getElementById('modal-backup').classList.remove('open'); }
+
+async function exportBackup() {
+  const foldersData=await dbGetAll('tareas_folders');
+  const tasksData=await dbGetAll('tareas_tasks');
+  const payload={version:1, exportedAt:new Date().toISOString(), folders:foldersData, tasks:tasksData};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const fecha=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+  a.download=`tareas-backup-${fecha}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function importBackup(event) {
+  const file=event.target.files[0];
+  if (!file) return;
+  const text=await file.text();
+  let data;
+  try { data=JSON.parse(text); } catch(e) { alert('El archivo no es válido.'); return; }
+  if (!data.folders||!data.tasks) { alert('El archivo no tiene el formato correcto.'); return; }
+  if (!confirm(`¿Restaurar backup de ${data.exportedAt?new Date(data.exportedAt).toLocaleDateString('es-ES'):'fecha desconocida'}?\n\nSe perderán todos los datos actuales.`)) {
+    event.target.value=''; return;
+  }
+  await dbClear('tareas_tasks');
+  await dbClear('tareas_folders');
+  for (const f of data.folders) await dbPut('tareas_folders',f);
+  for (const t of data.tasks) await dbPut('tareas_tasks',t);
+  event.target.value='';
+  closeBackupModal();
+  await loadFolders();
+  alert('✅ Backup restaurado correctamente.');
+}
+
+// ── CARPETAS ───────────────────────────────────────────
+async function loadFolders() { folders=await dbGetAll('tareas_folders'); folders.sort((a,b)=>a.order-b.order); renderFolders(); }
+
+function renderFolders() {
+  const grid=document.getElementById('folders-grid'), empty=document.getElementById('folders-empty');
+  document.getElementById('header-sub').textContent=`${folders.length} carpeta${folders.length!==1?'s':''}`;
+  if (!folders.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  dbGetAll('tareas_tasks').then(all => {
+    grid.innerHTML=folders.map(f => {
+      const ft=all.filter(t=>t.folderId===f.id&&!t.done);
+      const p=ft.length;
+      const td=ft.filter(t=>t.date===todayStr()).length;
+      const urgent=ft.filter(t=>t.date&&isUrgent(t.date)).length;
+      const isUrgentFolder=urgent>0;
+      return `<div class="folder-card${isUrgentFolder?' has-urgent':''}" style="${isUrgentFolder?'':'--folder-color:'+f.color}" onclick="openFolder('${f.id}')">
+        <div class="folder-card-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();editFolder('${f.id}')">✏️</button>
+          <button class="btn-icon del" onclick="event.stopPropagation();deleteFolderById('${f.id}')">🗑</button>
+        </div>
+        <span class="folder-emoji">${f.emoji}</span>
+        <div class="folder-name">${esc(f.name)}</div>
+        <div class="folder-count">
+          <b>${p}</b> pendiente${p!==1?'s':''}
+          ${isUrgentFolder?`<span class="badge-urgent">🔴 ${urgent} urgente${urgent!==1?'s':''}</span>`:(td>0?`<span class="badge-today">hoy: ${td}</span>`:'')}
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function buildEmojiPicker() {
+  document.getElementById('emoji-picker').innerHTML=EMOJIS.map(e=>`<button class="emoji-btn${e===selectedEmoji?' selected':''}" onclick="selectEmoji('${e}')">${e}</button>`).join('');
+}
+function selectEmoji(e){selectedEmoji=e;buildEmojiPicker();}
+function buildColorOptions() {
+  document.getElementById('color-options').innerHTML=COLORS.map(c=>`<div class="color-dot${c===selectedColor?' selected':''}" style="background:${c}" onclick="selectColor('${c}')"></div>`).join('');
+}
+function selectColor(c){selectedColor=c;buildColorOptions();}
+
+function openFolderModal(editId=null) {
+  editingFolderId=editId; customFieldDefs=[];
+  document.getElementById('folder-modal-title').textContent=editId?'Editar carpeta':'Nueva carpeta';
+  if (editId) {
+    const f=folders.find(x=>x.id===editId);
+    document.getElementById('folder-name-input').value=f.name;
+    selectedEmoji=f.emoji; selectedColor=f.color;
+    customFieldDefs=f.customFields?JSON.parse(JSON.stringify(f.customFields)):[];
+  } else {
+    document.getElementById('folder-name-input').value='';
+    selectedEmoji='📋'; selectedColor='#4a9eff';
+  }
+  buildEmojiPicker(); buildColorOptions(); renderCustomFieldDefs();
+  document.getElementById('modal-folder').classList.add('open');
+}
+function closeFolderModal(){document.getElementById('modal-folder').classList.remove('open');}
+function addCustomField(){customFieldDefs.push({name:'',type:'text'});renderCustomFieldDefs();}
+function removeCustomField(i){customFieldDefs.splice(i,1);renderCustomFieldDefs();}
+function renderCustomFieldDefs() {
+  document.getElementById('custom-fields-list').innerHTML=customFieldDefs.map((f,i)=>`
+    <div class="custom-field-row">
+      <input class="form-input" placeholder="Nombre del campo" value="${esc(f.name)}" oninput="customFieldDefs[${i}].name=this.value">
+      <select class="form-select" style="width:140px" onchange="customFieldDefs[${i}].type=this.value">
+        <option value="text"${f.type==='text'?' selected':''}>Texto</option>
+        <option value="date"${f.type==='date'?' selected':''}>Fecha</option>
+        <option value="number"${f.type==='number'?' selected':''}>Número</option>
+        <option value="shoplist"${f.type==='shoplist'?' selected':''}>🛒 Lista compra</option>
+      </select>
+      <button class="btn-icon del" onclick="removeCustomField(${i})">✕</button>
+    </div>`).join('');
+}
+async function saveFolder() {
+  const name=document.getElementById('folder-name-input').value.trim();
+  if (!name){document.getElementById('folder-name-input').focus();return;}
+  const cf=customFieldDefs.filter(f=>f.name.trim());
+  if (editingFolderId) {
+    const f=folders.find(x=>x.id===editingFolderId);
+    Object.assign(f,{name,emoji:selectedEmoji,color:selectedColor,customFields:cf});
+    await dbPut('tareas_folders',f);
+  } else {
+    await dbPut('tareas_folders',{id:uid(),name,emoji:selectedEmoji,color:selectedColor,customFields:cf,order:folders.length,createdAt:Date.now()});
+  }
+  closeFolderModal();
+  await loadFolders();
+  if(currentFolderId&&editingFolderId===currentFolderId)renderFolderDetail();
+}
+const editFolder=id=>openFolderModal(id);
+const editCurrentFolder=()=>openFolderModal(currentFolderId);
+async function deleteFolderById(id) {
+  if(!confirm('¿Eliminar esta carpeta y todas sus tareas?'))return;
+  const tasks=await dbIdx('tareas_tasks','folderId',id);
+  for(const t of tasks)await dbDel('tareas_tasks',t.id);
+  await dbDel('tareas_folders',id);
+  folders=folders.filter(f=>f.id!==id);
+  renderFolders();
+}
+async function deleteCurrentFolder(){await deleteFolderById(currentFolderId);goBack();}
+
+// ── VISTA CARPETA ──────────────────────────────────────
+async function openFolder(id){
+  currentFolderId=id;currentTab='pending';
+  document.getElementById('folders-view').classList.add('hidden');
+  document.getElementById('folder-detail').classList.remove('hidden');
+  renderFolderDetail();
+}
+function goBack(){
+  currentFolderId=null;
+  document.getElementById('folder-detail').classList.add('hidden');
+  document.getElementById('folders-view').classList.remove('hidden');
+  loadFolders();
+}
+async function renderFolderDetail(){
+  const f=folders.find(x=>x.id===currentFolderId);if(!f)return;
+  document.getElementById('detail-emoji').textContent=f.emoji;
+  document.getElementById('detail-name').textContent=f.name;
+  const all=await dbIdx('tareas_tasks','folderId',currentFolderId);
+  document.getElementById('detail-stats').textContent=`${all.filter(t=>!t.done).length} pendientes · ${all.filter(t=>t.done).length} completadas`;
+  switchTab(currentTab,all);
+}
+function switchTab(tab,tasks=null){
+  currentTab=tab;
+  document.getElementById('tab-pending').classList.toggle('active',tab==='pending');
+  document.getElementById('tab-history').classList.toggle('active',tab==='history');
+  document.getElementById('tab-content-pending').style.display=tab==='pending'?'':'none';
+  document.getElementById('tab-content-history').style.display=tab==='history'?'':'none';
+  if(tasks){tab==='pending'?renderTaskList(tasks.filter(t=>!t.done)):renderHistory(tasks.filter(t=>t.done));}
+  else dbIdx('tareas_tasks','folderId',currentFolderId).then(all=>{tab==='pending'?renderTaskList(all.filter(t=>!t.done)):renderHistory(all.filter(t=>t.done));});
+}
+function renderTaskList(tasks){
+  const list=document.getElementById('tasks-list'),empty=document.getElementById('tasks-empty');
+  tasks.sort((a,b)=>{if(!a.date&&!b.date)return 0;if(!a.date)return 1;if(!b.date)return -1;return a.date.localeCompare(b.date);});
+  if(!tasks.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const f=folders.find(x=>x.id===currentFolderId);
+  list.innerHTML=tasks.map(t=>taskCardHTML(t,f,false)).join('');
+}
+function renderHistory(tasks){
+  const list=document.getElementById('history-list'),empty=document.getElementById('history-empty');
+  if(!tasks.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tasks.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const groups={};
+  tasks.forEach(t=>{const d=t.doneAt?new Date(t.doneAt).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'Sin fecha';if(!groups[d])groups[d]=[];groups[d].push(t);});
+  const f=folders.find(x=>x.id===currentFolderId);
+  list.innerHTML=Object.entries(groups).map(([date,ts])=>`
+    <div class="history-date-group">
+      <div class="history-date-label">${date}</div>
+      <div class="tasks-list">${ts.map(t=>taskCardHTML(t,f,true)).join('')}</div>
+    </div>`).join('');
+}
+
+// ── RENDER TARJETA ─────────────────────────────────────
+function taskCardHTML(t,folder,isHistory){
+  const f=folder||{};
+  const dateStr=t.date?formatDate(t.date):'';
+  const urgent=!t.done&&t.date&&isUrgent(t.date);
+  const isOverdue=t.date&&t.date<todayStr()&&!t.done;
+  const isSoon=!isOverdue&&urgent;
+  const dateClass=isOverdue?'overdue':isSoon?'soon':'';
+  const cfields=(f.customFields||[]).filter(cf=>cf.name&&t.custom&&t.custom[cf.name]!==undefined);
+  const simpleFields=cfields.filter(cf=>cf.type!=='shoplist'&&t.custom[cf.name]!=='');
+  const shopFields=cfields.filter(cf=>cf.type==='shoplist');
+
+  const simpleHTML=simpleFields.length?`<div class="task-custom-data">${simpleFields.map(cf=>`<div class="task-custom-item"><b>${esc(cf.name)}:</b> ${esc(t.custom[cf.name])}</div>`).join('')}</div>`:'';
+
+  const shopHTML=shopFields.map(cf=>{
+    const stores=t.custom[cf.name];
+    if(!stores||!stores.length)return '';
+    return `<div class="shop-list-card">${stores.map((st,si)=>{
+      const items=st.items||[];
+      const checked=(st.itemsChecked||[]).filter(Boolean).length;
+      return `<div class="shop-store-block">
+        <div class="shop-store-header"><span>🏪</span><span class="shop-store-name">${esc(st.store||'Sin nombre')}</span><span class="shop-store-count">${checked}/${items.length}</span></div>
+        <div class="shop-items">${items.map((item,ii)=>{
+          const isChk=(st.itemsChecked||[])[ii];
+          return `<div class="shop-item">
+            <div class="shop-item-check${isChk?' checked':''}" onclick="toggleShopItem('${t.id}','${cf.name}',${si},${ii})">${isChk?'✓':''}</div>
+            <span class="shop-item-name${isChk?' checked-text':''}">${esc(item.name)}</span>
+            ${item.qty?`<span class="shop-item-qty">${esc(item.qty)}</span>`:''}
+          </div>`;
+        }).join('')}</div>
+      </div>`;
+    }).join('')}</div>`;
+  }).join('');
+
+  return `<div class="task-card${t.done?' done':urgent?' urgent':''}" id="task-${t.id}">
+    <div class="task-check" onclick="${isHistory?'restoreTask':'toggleTask'}('${t.id}')">${t.done?'✓':''}</div>
+    <div class="task-body">
+      <div class="task-title">${esc(t.title)}</div>
+      ${dateStr?`<div class="task-meta"><div class="task-date ${dateClass}">${dateStr}</div></div>`:''}
+      ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
+      ${simpleHTML}${shopHTML}
+    </div>
+    <div class="task-actions">
+      ${!isHistory?`<button class="btn-icon" onclick="editTask('${t.id}')">✏️</button>`:''}
+      <button class="btn-icon del" onclick="deleteTask('${t.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+async function toggleShopItem(taskId,fieldName,si,ii){
+  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===taskId);
+  const stores=t.custom[fieldName];
+  if(!stores||!stores[si])return;
+  if(!stores[si].itemsChecked)stores[si].itemsChecked=[];
+  stores[si].itemsChecked[ii]=!stores[si].itemsChecked[ii];
+  await dbPut('tareas_tasks',t);renderFolderDetail();
+}
+
+// ── TAREAS ─────────────────────────────────────────────
+function openTaskModal(editId=null){
+  editingTaskId=editId;shopEditorData={};
+  const folder=folders.find(f=>f.id===currentFolderId);
+  document.getElementById('task-modal-title').textContent=editId?'Editar tarea':'Nueva tarea';
+  const shopFields=(folder&&folder.customFields||[]).filter(f=>f.type==='shoplist'&&f.name);
+  if(editId){
+    dbGetAll('tareas_tasks').then(all=>{
+      const t=all.find(x=>x.id===editId);
+      document.getElementById('task-title-input').value=t.title;
+      document.getElementById('task-date-input').value=t.date||'';
+      document.getElementById('task-notes-input').value=t.notes||'';
+      shopFields.forEach(f=>{
+        const slug=slugify(f.name);
+        shopEditorData[slug]=t.custom&&t.custom[f.name]&&t.custom[f.name].length?JSON.parse(JSON.stringify(t.custom[f.name])):[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];
+      });
+      buildCustomTaskInputs(folder,t.custom||{});
+      document.getElementById('modal-task').classList.add('open');
+    });
+  } else {
+    document.getElementById('task-title-input').value='';
+    document.getElementById('task-date-input').value='';
+    document.getElementById('task-notes-input').value='';
+    shopFields.forEach(f=>{shopEditorData[slugify(f.name)]=[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];});
+    buildCustomTaskInputs(folder,{});
+    document.getElementById('modal-task').classList.add('open');
+  }
+}
+function closeTaskModal(){document.getElementById('modal-task').classList.remove('open');}
+
+function buildCustomTaskInputs(folder,values){
+  const fields=(folder&&folder.customFields||[]).filter(f=>f.name);
+  document.getElementById('task-custom-inputs').innerHTML=fields.map(f=>{
+    if(f.type==='shoplist'){
+      const slug=slugify(f.name);
+      return `<div class="form-group">
+        <label class="form-label">🛒 ${esc(f.name)}</label>
+        <div class="shop-editor" id="shop-editor-${slug}"></div>
+        <button class="btn-add-store" onclick="addStore('${slug}')">＋ Añadir establecimiento</button>
+      </div>`;
+    }
+    return `<div class="form-group">
+      <label class="form-label">${esc(f.name)}</label>
+      <input class="form-input" type="${f.type==='date'?'date':f.type==='number'?'number':'text'}" id="custom-input-${slugify(f.name)}" value="${esc(values[f.name]||'')}">
+    </div>`;
+  }).join('');
+  fields.filter(f=>f.type==='shoplist'&&f.name).forEach(f=>renderShopEditor(slugify(f.name)));
+}
+
+function renderShopEditor(slug){
+  const container=document.getElementById(`shop-editor-${slug}`);if(!container)return;
+  const stores=shopEditorData[slug]||[];
+  container.innerHTML=stores.map((st,si)=>`
+    <div class="shop-store-editor">
+      <div class="shop-store-editor-header">
+        <span>🏪</span>
+        <input class="form-input" placeholder="Mercadona, Mercado, Lidl…" value="${esc(st.store)}" oninput="shopEditorData['${slug}'][${si}].store=this.value">
+        ${stores.length>1?`<button class="btn-icon del" onclick="removeStore('${slug}',${si})">✕</button>`:''}
+      </div>
+      <div class="shop-items-editor">
+        ${(st.items||[]).map((item,ii)=>`
+          <div class="shop-item-row">
+            <input class="form-input item-name" placeholder="Artículo" value="${esc(item.name)}" oninput="shopEditorData['${slug}'][${si}].items[${ii}].name=this.value">
+            <input class="form-input item-qty" placeholder="Cant." value="${esc(item.qty)}" oninput="shopEditorData['${slug}'][${si}].items[${ii}].qty=this.value">
+            ${st.items.length>1?`<button class="btn-icon del" onclick="removeItem('${slug}',${si},${ii})">✕</button>`:''}
+          </div>`).join('')}
+        <button class="btn-add-item" onclick="addItem('${slug}',${si})">＋ Añadir artículo</button>
+      </div>
+    </div>`).join('');
+}
+function addStore(slug){if(!shopEditorData[slug])shopEditorData[slug]=[];shopEditorData[slug].push({store:'',items:[{name:'',qty:''}],itemsChecked:[]});renderShopEditor(slug);}
+function removeStore(slug,si){shopEditorData[slug].splice(si,1);renderShopEditor(slug);}
+function addItem(slug,si){shopEditorData[slug][si].items.push({name:'',qty:''});renderShopEditor(slug);}
+function removeItem(slug,si,ii){shopEditorData[slug][si].items.splice(ii,1);renderShopEditor(slug);}
+
+async function saveTask(){
+  const title=document.getElementById('task-title-input').value.trim();
+  if(!title){document.getElementById('task-title-input').focus();return;}
+  const folder=folders.find(f=>f.id===currentFolderId);
+  const fields=(folder&&folder.customFields||[]).filter(f=>f.name);
+  const custom={};
+  fields.forEach(f=>{
+    const slug=slugify(f.name);
+    if(f.type==='shoplist'){
+      custom[f.name]=(shopEditorData[slug]||[]).map(st=>({store:st.store,items:(st.items||[]).filter(i=>i.name.trim()),itemsChecked:(st.itemsChecked||[])})).filter(st=>st.store||st.items.length);
+    } else {
+      const el=document.getElementById(`custom-input-${slug}`);
+      if(el)custom[f.name]=el.value;
+    }
+  });
+  const date=document.getElementById('task-date-input').value||null;
+  const notes=document.getElementById('task-notes-input').value.trim()||null;
+  if(editingTaskId){
+    const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===editingTaskId);
+    Object.assign(t,{title,date,notes,custom});
+    await dbPut('tareas_tasks',t);
+  } else {
+    await dbPut('tareas_tasks',{id:uid(),folderId:currentFolderId,title,date,notes,custom,done:false,createdAt:Date.now(),doneAt:null});
+  }
+  closeTaskModal();renderFolderDetail();
+}
+const editTask=id=>openTaskModal(id);
+async function toggleTask(id){
+  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===id);
+  t.done=!t.done;t.doneAt=t.done?Date.now():null;
+  await dbPut('tareas_tasks',t);renderFolderDetail();
+}
+async function restoreTask(id){
+  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===id);
+  t.done=false;t.doneAt=null;
+  await dbPut('tareas_tasks',t);renderFolderDetail();
+}
+async function deleteTask(id){
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  await dbDel('tareas_tasks',id);renderFolderDetail();
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
+});
+
+openDB().then(loadFolders);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.warn('SW no registrado:', err));
+  });
+}
+</script>
+</body>
+</html>
