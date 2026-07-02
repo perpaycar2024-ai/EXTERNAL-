@@ -1,0 +1,483 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>El jardín de Raúl</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2e3328">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Josefin+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --oliva-negro:  #1e2218; --oliva-dark:   #2e3328; --oliva:        #4a5240;
+  --oliva-soft:   #5e6b52; --verde-escarcha: #b8c4a8; --blanco-mate:  #dde5d4;
+  --agua:         #7ec8e3; --abono:         #d4a843;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Josefin Sans', sans-serif; background: var(--oliva-dark); color: var(--blanco-mate); min-height: 100vh; }
+
+
+/* CABECERA */
+.header-container { padding: 3rem 1rem 1rem; text-align: center; position: relative; }
+.lista-titulo { font-family: 'Libre Baskerville', serif; font-size: 1.8rem; font-style: italic; color: var(--verde-escarcha); }
+.btn-config { position: absolute; right: 20px; top: 3.2rem; background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; }
+
+
+/* CATEGORÍAS */
+.cats { display: flex; padding: 0 1rem; gap: 8px; margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: none; justify-content: center; }
+.cat-btn { padding: 8px 14px; border: 1px solid var(--oliva-soft); background: transparent; color: var(--verde-escarcha); border-radius: 12px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+.cat-btn.active { background: var(--oliva-soft); color: white; border-color: var(--verde-escarcha); }
+
+
+/* CUADRÍCULA */
+.plantas-lista { padding: 0 10px 100px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.planta-card { background: var(--oliva); aspect-ratio: 1 / 1.3; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05); }
+.img-pwa { width: 100%; height: 70%; object-fit: cover; background: var(--oliva-soft); }
+.p-info-mini { padding: 6px; flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.p-nom { font-family: 'Libre Baskerville', serif; font-size: 0.85rem; font-style: italic; line-height: 1.1; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-meta { display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: bold; opacity: 0.8; }
+
+
+/* FICHA DETALLE */
+#vista-ficha { display: none; position: fixed; inset: 0; background: var(--oliva-negro); z-index: 100; overflow-y: auto; }
+.ficha-hero { width: 100%; height: 35vh; object-fit: cover; opacity: 0.8; }
+.ficha-content { padding: 20px; margin-top: -30px; background: var(--oliva-negro); border-radius: 30px 30px 0 0; position: relative; }
+.seccion-pro { background: var(--oliva-dark); padding: 20px; border-radius: 20px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.03); }
+.input-edit { background: transparent; border: none; color: var(--blanco-mate); font-family: 'Libre Baskerville'; font-size: 1.8rem; font-style: italic; width: 100%; }
+
+
+/* APUNTES */
+.nota-card { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 8px; position: relative; font-size: 0.85rem; border-left: 2px solid var(--verde-escarcha); }
+.btn-del-nota { position: absolute; right: 8px; top: 10px; color: #ff8e8e; background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+
+
+/* MODALES */
+#modal, #modal-zonas { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+.modal-box { background: var(--oliva-dark); color: var(--blanco-mate); padding: 25px; border-radius: 25px; width: 100%; max-width: 350px; border: 1px solid var(--oliva-soft); }
+input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid var(--oliva-soft); background: var(--oliva-negro); color: white; font-family: inherit; }
+
+
+.btn-nueva { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 60px; height: 60px; border-radius: 20px; background: var(--verde-escarcha); border: none; font-size: 30px; color: var(--oliva-dark); box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 10; cursor: pointer; }
+.btn-accion { width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: 700; margin-top: 10px; cursor: pointer; }
+.zona-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); margin-bottom: 5px; border-radius: 10px; }
+.btn-regar-zona { padding: 7px 14px; border-radius: 10px; border: 1.5px solid var(--agua); background: transparent; color: var(--agua); font-family: 'Josefin Sans', sans-serif; font-size: 0.7rem; font-weight: 700; cursor: pointer; white-space: nowrap; letter-spacing: 0.05em; }
+.btn-regar-zona:active { background: var(--agua); color: var(--oliva-dark); }
+.fecha-edit-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.72rem; opacity: 0.7; }
+.fecha-edit-row input[type="date"] { padding: 5px 8px; margin: 0; font-size: 0.72rem; border-radius: 8px; width: auto; flex: 1; }
+.fecha-edit-row button { padding: 5px 10px; border-radius: 8px; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; background: rgba(255,255,255,0.12); color: white; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+
+<div id="vista-lista">
+  <div class="header-container">
+    <div class="lista-titulo">El jardín de Raúl</div>
+    <button class="btn-config" onclick="abrirModalZonas()">⚙️</button>
+  </div>
+  <div id="cats-container" class="cats"></div>
+  <div style="padding: 0 10px 12px; display:flex; justify-content:flex-end;">
+    <button class="btn-regar-zona" onclick="regarZonaEntera()">💧 Regar zona</button>
+  </div>
+  <div id="plantas-lista" class="plantas-lista"></div>
+  <button class="btn-nueva" id="btn-nueva">+</button>
+</div>
+
+
+<div id="modal-zonas">
+  <div class="modal-box">
+    <h3 style="margin-bottom:15px; color:var(--verde-escarcha);">Gestionar Zonas</h3>
+    <div id="lista-zonas-edit" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
+    <input type="text" id="nueva-zona-nombre" placeholder="Nombre nueva zona...">
+    <button onclick="addZona()" class="btn-accion" style="background:var(--verde-escarcha); color:var(--oliva-dark);">AÑADIR ZONA</button>
+    <div style="display:flex; gap:8px; margin-top:15px;">
+      <button onclick="exportarBackup()" style="flex:1; padding:10px; background:rgba(184,196,168,0.15); color:var(--verde-escarcha); border:1px solid var(--verde-escarcha); border-radius:10px; font-size:0.75rem; font-weight:700; cursor:pointer;">⬇️ EXPORTAR</button>
+      <label style="flex:1; padding:10px; background:rgba(212,168,67,0.15); color:var(--abono); border:1px solid var(--abono); border-radius:10px; font-size:0.75rem; font-weight:700; cursor:pointer; text-align:center;">⬆️ IMPORTAR<input type="file" accept=".json" style="display:none" onchange="importarBackup(this)"></label>
+    </div>
+    <button onclick="cerrarModalZonas()" style="width:100%; background:none; border:none; color:white; margin-top:15px; font-size:0.8rem;">CERRAR</button>
+  </div>
+</div>
+
+
+<div id="vista-ficha">
+  <button onclick="cerrarFicha()" style="position:fixed; top:20px; left:20px; width:40px; height:40px; border-radius:12px; border:none; background:var(--oliva-soft); color:white; z-index:110;">←</button>
+  <img id="ficha-img" class="ficha-hero" src="">
+  <div class="ficha-content">
+    <div class="seccion-pro" style="background:none; border:none; padding:0 0 15px;">
+      <input type="text" id="edit-nombre" class="input-edit" onchange="saveEdit()">
+      <select id="edit-cat" style="background:transparent; color:var(--verde-escarcha); border:none; font-weight:bold;" onchange="saveEdit()"></select>
+    </div>
+    <div class="seccion-pro">
+      <div id="info-riego" style="color:var(--agua); font-weight:bold;"></div>
+      <div class="fecha-edit-row">
+        <span style="color:var(--agua);">✏️ Cambiar fecha:</span>
+        <input type="date" id="fecha-riego-edit" style="color-scheme:dark;">
+        <button onclick="editarFechaRiego()" style="background:rgba(126,200,227,0.2); color:var(--agua);">OK</button>
+      </div>
+      <button onclick="regarYa()" class="btn-accion" style="background:var(--agua); color:var(--oliva-dark);">REGAR HOY</button>
+    </div>
+    <div class="seccion-pro">
+      <div id="info-abono" style="color:var(--abono); font-weight:bold; margin-bottom:8px;"></div>
+      <div class="fecha-edit-row">
+        <span style="color:var(--abono);">✏️ Cambiar fecha:</span>
+        <input type="date" id="fecha-abono-edit" style="color-scheme:dark;">
+        <button onclick="editarFechaAbono()" style="background:rgba(212,168,67,0.2); color:var(--abono);">OK</button>
+      </div>
+      <input type="text" id="tipo-abono-input" placeholder="¿Qué abono usas?">
+      <button onclick="abonarYa()" class="btn-accion" style="background:var(--abono); color:var(--oliva-dark);">ABONAR HOY</button>
+    </div>
+    <div class="seccion-pro">
+      <h3 style="margin-bottom:12px; font-family:'Libre Baskerville'; color:var(--verde-escarcha);">Apuntes</h3>
+      <div id="lista-apuntes"></div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+          <input type="text" id="nueva-nota" placeholder="Nota..." style="margin:0; flex:1;">
+          <button onclick="addNota()" style="background:var(--verde-escarcha); color:var(--oliva-dark); border-radius:10px; width:45px; font-weight:bold;">+</button>
+      </div>
+    </div>
+    <button onclick="eliminarPlanta()" style="width:100%; color:rgba(255,255,255,0.2); background:none; border:none; font-size:0.7rem; margin-top:20px;">ELIMINAR PLANTA</button>
+  </div>
+</div>
+
+
+<div id="modal">
+  <div class="modal-box">
+    <h3 style="color:var(--verde-escarcha); margin-bottom:15px;">Nueva Planta</h3>
+    <input type="text" id="ins-nombre" placeholder="Nombre...">
+    <div style="display:flex; gap:8px; margin:10px 0;">
+      <label style="flex:1; padding:12px; border:1px solid var(--verde-escarcha); border-radius:10px; text-align:center; font-size:0.7rem;">📸 CAM<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleImgSelect(this)"></label>
+      <label style="flex:1; padding:12px; border:1px solid var(--verde-escarcha); border-radius:10px; text-align:center; font-size:0.7rem;">🖼️ GAL<input type="file" accept="image/*" style="display:none" onchange="handleImgSelect(this)"></label>
+    </div>
+    <div id="status-img" style="font-size:0.7rem; text-align:center; color:var(--verde-escarcha); display:none; margin-bottom:10px;">✅ Foto lista</div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="cerrarModal()" style="flex:1; padding:12px; background:rgba(255,255,255,0.05); color:white; border-radius:10px; border:none;">VOLVER</button>
+      <button onclick="addPlant()" style="flex:1; padding:12px; background:var(--verde-escarcha); color:var(--oliva-dark); border-radius:10px; border:none; font-weight:bold;">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let db;
+let selectedImgData = null;
+let activeCat = '';
+let currentFichaId = null;
+
+
+// Sistema de apertura robusto
+function iniciarApp() {
+    const request = indexedDB.open('external_db', 2); // Versión 3 para forzar limpieza
+
+
+    request.onupgradeneeded = e => {
+        const dbInst = e.target.result;
+        if(!dbInst.objectStoreNames.contains('tareas_folders')) dbInst.createObjectStore('tareas_folders',{keyPath:'id'});
+        if(!dbInst.objectStoreNames.contains('tareas_tasks')){const ts=dbInst.createObjectStore('tareas_tasks',{keyPath:'id'});ts.createIndex('folderId','folderId');}
+        if(!dbInst.objectStoreNames.contains('coches')) dbInst.createObjectStore('coches',{keyPath:'id'});
+        if(!dbInst.objectStoreNames.contains('notes')) dbInst.createObjectStore('notes',{keyPath:'id'});
+        if(!dbInst.objectStoreNames.contains('jardinraul_plantas')) dbInst.createObjectStore('jardinraul_plantas',{keyPath:'id'});
+        if(!dbInst.objectStoreNames.contains('jardinraul_config')) dbInst.createObjectStore('jardinraul_config',{keyPath:'id'});
+    };
+
+
+    request.onsuccess = e => {
+        db = e.target.result;
+        initZonas();
+    };
+
+
+    request.onerror = e => alert("Error abriendo base de datos. Por favor, reinicia el navegador.");
+}
+
+
+function initZonas() {
+    const tx = db.transaction(['jardinraul_config'], 'readwrite');
+    const store = tx.objectStore('jardinraul_config');
+    store.get('zonas').onsuccess = e => {
+        let zonas;
+        if (!e.target.result) {
+            zonas = ['Terraza', 'Colgadas', 'Salón'];
+            store.add({id: 'zonas', lista: zonas});
+        } else {
+            zonas = e.target.result.lista;
+        }
+        activeCat = zonas[0] || '';
+        renderCategorias(zonas);
+        renderLista();
+    };
+}
+
+
+function renderCategorias(zonas) {
+    const cont = document.getElementById('cats-container');
+    const selectFicha = document.getElementById('edit-cat');
+    cont.innerHTML = zonas.map(z => `<button class="cat-btn ${z===activeCat?'active':''}" onclick="cambiarCat('${z}')">${z}</button>`).join('');
+    selectFicha.innerHTML = zonas.map(z => `<option value="${z}" ${z===activeCat?'selected':''}>${z.toUpperCase()}</option>`).join('');
+}
+
+
+function cambiarCat(z) { activeCat = z; renderCategoriasActuales(); renderLista(); }
+
+
+function renderCategoriasActuales() {
+    const tx = db.transaction(['jardinraul_config'], 'readonly');
+    tx.objectStore('jardinraul_config').get('zonas').onsuccess = e => {
+        if(e.target.result) renderCategorias(e.target.result.lista);
+    };
+}
+
+
+function abrirModalZonas() {
+    document.getElementById('modal-zonas').style.display = 'flex';
+    const tx = db.transaction(['jardinraul_config'], 'readonly');
+    tx.objectStore('jardinraul_config').get('zonas').onsuccess = e => {
+        const zonas = e.target.result.lista;
+        document.getElementById('lista-zonas-edit').innerHTML = zonas.map(z => `
+            <div class="zona-item">
+                <span>${z}</span>
+                <button onclick="borrarZona('${z}')" style="background:none; border:none; color:#ff8e8e; font-weight:bold;">✕</button>
+            </div>`).join('');
+    };
+}
+
+
+function addZona() {
+    const nueva = document.getElementById('nueva-zona-nombre').value.trim();
+    if(!nueva) return;
+    const tx = db.transaction(['jardinraul_config'], 'readwrite');
+    const store = tx.objectStore('jardinraul_config');
+    store.get('zonas').onsuccess = e => {
+        const d = e.target.result;
+        if(!d.lista.includes(nueva)) d.lista.push(nueva);
+        store.put(d);
+        tx.oncomplete = () => { document.getElementById('nueva-zona-nombre').value = ''; abrirModalZonas(); renderCategoriasActuales(); };
+    };
+}
+
+
+function borrarZona(z) {
+    if(confirm(`¿Borrar zona "${z}"?`)) {
+        const tx = db.transaction(['jardinraul_config'], 'readwrite');
+        const store = tx.objectStore('jardinraul_config');
+        store.get('zonas').onsuccess = e => {
+            const d = e.target.result;
+            d.lista = d.lista.filter(item => item !== z);
+            if(activeCat === z) activeCat = d.lista[0] || '';
+            store.put(d);
+            tx.oncomplete = () => { abrirModalZonas(); renderCategoriasActuales(); renderLista(); };
+        };
+    }
+}
+
+
+function renderLista() {
+    const cont = document.getElementById('plantas-lista');
+    const tx = db.transaction(['jardinraul_plantas'], 'readonly');
+    tx.objectStore('jardinraul_plantas').getAll().onsuccess = e => {
+        const plants = e.target.result.filter(p => p.category === activeCat);
+        cont.innerHTML = plants.map(p => `
+            <div class="planta-card" onclick="abrirFicha('${p.id}')">
+                <img src="${p.foto || ''}" class="img-pwa" style="display:${p.foto?'block':'none'}">
+                <div class="p-info-mini">
+                    <div class="p-nom">${p.name}</div>
+                    <div class="p-meta">
+                        <span style="color:var(--agua)">💧${daysSince(p.lastWatered)}</span>
+                        <span style="color:var(--abono)">🌿${daysSince(p.lastFertilized)}</span>
+                    </div>
+                </div>
+            </div>`).join('');
+    };
+}
+
+
+function daysSince(iso) { return Math.floor(Math.abs(new Date()-new Date(iso))/86400000); }
+
+
+function handleImgSelect(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { selectedImgData = e.target.result; document.getElementById('status-img').style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+
+function addPlant() {
+    const name = document.getElementById('ins-nombre').value;
+    if(!name || !activeCat) return;
+    const p = { id: Date.now().toString(), name, category: activeCat, foto: selectedImgData, lastWatered: new Date().toISOString(), lastFertilized: new Date().toISOString(), ultimoAbonoUsado: 'Ninguno', notas: [] };
+    const tx = db.transaction(['jardinraul_plantas'], 'readwrite');
+    tx.objectStore('jardinraul_plantas').add(p);
+    tx.oncomplete = () => { renderLista(); cerrarModal(); selectedImgData = null; document.getElementById('status-img').style.display = 'none'; document.getElementById('ins-nombre').value=''; };
+}
+
+
+function abrirFicha(id) {
+    currentFichaId = id;
+    db.transaction(['jardinraul_plantas']).objectStore('jardinraul_plantas').get(id).onsuccess = e => {
+        const p = e.target.result;
+        document.getElementById('edit-nombre').value = p.name;
+        document.getElementById('edit-cat').value = p.category;
+        document.getElementById('ficha-img').src = p.foto || '';
+        document.getElementById('info-riego').innerText = `Último riego: hace ${daysSince(p.lastWatered)} días`;
+        document.getElementById('fecha-riego-edit').value = p.lastWatered ? p.lastWatered.slice(0,10) : '';
+        document.getElementById('info-abono').innerHTML = `Último abono: hace ${daysSince(p.lastFertilized)} días <br><small style="opacity:0.6;">Tipo: ${p.ultimoAbonoUsado || '-'}</small>`;
+        document.getElementById('fecha-abono-edit').value = p.lastFertilized ? p.lastFertilized.slice(0,10) : '';
+        renderNotas(p.notas || []);
+        document.getElementById('vista-ficha').style.display = 'block';
+    };
+}
+
+
+function renderNotas(notas) {
+    const nCont = document.getElementById('lista-apuntes');
+    nCont.innerHTML = notas.map((n, index) => `
+        <div class="nota-card">
+            <span style="font-size:0.65rem; opacity:0.5; display:block; margin-bottom:4px;">${n.fecha}</span>
+            <div style="padding-right:25px;">${n.texto}</div>
+            <button class="btn-del-nota" onclick="deleteNota(${index})">×</button>
+        </div>`).join('');
+}
+
+
+function deleteNota(index) {
+    if(confirm("¿Borrar nota?")) {
+        updatePlantaData(p => { p.notas.splice(index, 1); }, () => abrirFicha(currentFichaId));
+    }
+}
+
+
+function saveEdit() {
+    const newName = document.getElementById('edit-nombre').value;
+    const newCat = document.getElementById('edit-cat').value;
+    updatePlantaData(p => { p.name = newName; p.category = newCat; }, renderLista);
+}
+
+
+function addNota() {
+    const texto = document.getElementById('nueva-nota').value.trim();
+    if(!texto) return;
+    updatePlantaData(p => { 
+        if(!p.notas) p.notas = []; 
+        p.notas.unshift({ texto, fecha: new Date().toLocaleDateString() }); 
+    }, () => { document.getElementById('nueva-nota').value=''; abrirFicha(currentFichaId); });
+}
+
+
+function regarYa() { updatePlantaData(p => p.lastWatered = new Date().toISOString(), () => abrirFicha(currentFichaId)); }
+function abonarYa() {
+    const abonoUsado = document.getElementById('tipo-abono-input').value || 'Genérico';
+    updatePlantaData(p => { p.lastFertilized = new Date().toISOString(); p.ultimoAbonoUsado = abonoUsado; }, () => { document.getElementById('tipo-abono-input').value = ''; abrirFicha(currentFichaId); });
+}
+
+
+function updatePlantaData(callback, onFinish) {
+    const tx = db.transaction(['jardinraul_plantas'], 'readwrite');
+    const store = tx.objectStore('jardinraul_plantas');
+    store.get(currentFichaId).onsuccess = e => { const p = e.target.result; callback(p); store.put(p); tx.oncomplete = onFinish; };
+}
+
+
+function eliminarPlanta() {
+    if(confirm("¿Eliminar planta?")) {
+        const tx = db.transaction(['jardinraul_plantas'], 'readwrite');
+        tx.objectStore('jardinraul_plantas').delete(currentFichaId);
+        tx.oncomplete = () => { renderLista(); cerrarFicha(); };
+    }
+}
+
+
+function cerrarFicha() { document.getElementById('vista-ficha').style.display = 'none'; renderLista(); }
+function cerrarModal() { document.getElementById('modal').style.display = 'none'; }
+function cerrarModalZonas() { document.getElementById('modal-zonas').style.display = 'none'; }
+document.getElementById('btn-nueva').onclick = () => document.getElementById('modal').style.display = 'flex';
+
+
+function regarZonaEntera() {
+    if(!confirm(`¿Regar todas las plantas de "${activeCat}"?`)) return;
+    const tx = db.transaction(['jardinraul_plantas'], 'readwrite');
+    const store = tx.objectStore('jardinraul_plantas');
+    store.getAll().onsuccess = e => {
+        const plantas = e.target.result.filter(p => p.category === activeCat);
+        if(!plantas.length) { alert('No hay plantas en esta zona.'); return; }
+        const ahora = new Date().toISOString();
+        plantas.forEach(p => { p.lastWatered = ahora; store.put(p); });
+        tx.oncomplete = () => renderLista();
+    };
+}
+
+
+function editarFechaRiego() {
+    const val = document.getElementById('fecha-riego-edit').value;
+    if(!val) return;
+    const iso = new Date(val + 'T12:00:00').toISOString();
+    updatePlantaData(p => { p.lastWatered = iso; }, () => abrirFicha(currentFichaId));
+}
+
+
+function editarFechaAbono() {
+    const val = document.getElementById('fecha-abono-edit').value;
+    if(!val) return;
+    const iso = new Date(val + 'T12:00:00').toISOString();
+    updatePlantaData(p => { p.lastFertilized = iso; }, () => abrirFicha(currentFichaId));
+}
+
+
+function exportarBackup() {
+    const datos = {};
+    const tx = db.transaction(['jardinraul_plantas', 'jardinraul_config'], 'readonly');
+    tx.objectStore('jardinraul_plantas').getAll().onsuccess = e => {
+        datos.plantas = e.target.result;
+        tx.objectStore('jardinraul_config').getAll().onsuccess = e2 => {
+            datos.config = e2.target.result;
+            const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jardin-raul-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+    };
+}
+
+
+function importarBackup(input) {
+    if (!input.files || !input.files[0]) return;
+    if (!db) { alert('La base de datos aún no está lista. Espera un momento e inténtalo de nuevo.'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const datos = JSON.parse(e.target.result);
+            if (!datos.plantas || !datos.config) { alert('Archivo no válido: faltan los campos plantas o config.'); return; }
+            if (!confirm('¿Importar backup? Esto reemplazará todos los datos actuales.')) return;
+            const tx = db.transaction(['jardinraul_plantas', 'jardinraul_config'], 'readwrite');
+            tx.objectStore('jardinraul_plantas').clear();
+            tx.objectStore('jardinraul_config').clear();
+            tx.oncomplete = () => {
+                const tx2 = db.transaction(['jardinraul_plantas', 'jardinraul_config'], 'readwrite');
+                datos.plantas.forEach(p => tx2.objectStore('jardinraul_plantas').put(p));
+                datos.config.forEach(c => tx2.objectStore('jardinraul_config').put(c));
+                tx2.oncomplete = () => { alert('✅ Backup restaurado.'); iniciarApp(); };
+                tx2.onerror = ev => alert('Error guardando datos: ' + ev.target.error);
+            };
+            tx.onerror = ev => alert('Error limpiando datos: ' + ev.target.error);
+        } catch(err) { alert('Error al leer el archivo: ' + err.message); }
+    };
+    reader.readAsText(input.files[0]);
+}
+
+
+// Arrancamos
+iniciarApp();
+
+// ── EXTERNAL: navegación desde buscador ──────────────────
+window.addEventListener('message', e => {
+  if (!e.data || e.data.tipo !== 'irA') return;
+  const {plantaId} = e.data;
+  if (!plantaId) return;
+  if (!db) { setTimeout(() => window.dispatchEvent(new MessageEvent('message', {data: e.data})), 300); return; }
+  setTimeout(() => abrirFicha(plantaId), 150);
+});
+</script>
+</body>
+</html>
