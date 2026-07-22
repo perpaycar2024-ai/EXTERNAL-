@@ -1,0 +1,833 @@
+/* ==========================================================================
+   HOJA DE ESTILOS PREMIUM - TOTALMENTE RESPONSIVA Y CORREGIDA
+   ========================================================================== */
+:root {
+    --bg-dark: #0b0f19;          /* Fondo espacio profundo */
+    --accent: #2563eb;           /* Azul eléctrico */
+    --accent-glow: rgba(37, 99, 235, 0.4);
+    --success: #10b981;          /* Verde neón */
+    --success-glow: rgba(16, 185, 129, 0.3);
+    --warning: #f59e0b;          /* Naranja oro */
+    --danger: #ef4444;           /* Rojo rubí */
+    --danger-glow: rgba(239, 68, 68, 0.3);
+    
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-border-rich: rgba(255, 255, 255, 0.2);
+    
+    --shadow-3d-card: 0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    --shadow-3d-btn: 0 4px 12px rgba(37, 99, 235, 0.3), inset 0 2px 0 rgba(255,255,255,0.25);
+    --shadow-3d-btn-active: 0 1px 3px rgba(37, 99, 235, 0.1);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden; /* Evita scrolls extraños en el fondo */
+    height: 100dvh;
+    width: 100vw;
+}
+
+/* ==========================================================================
+   EFECTO DE FONDO NATIVO CON PRESENCIA (NEÓN + MALLA INGENIERÍA)
+   ========================================================================== */
+.app-bg-glow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.08) 0%, transparent 60%);
+    z-index: -2;
+}
+
+.app-bg-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-size: 30px 30px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    z-index: -1;
+}
+
+/* ==========================================================================
+   SISTEMA DE NAVEGACIÓN ENTRE VISTAS (PÁGINAS COMPLETAS DESLIZANTES)
+   ========================================================================== */
+.app-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh; /* Evita desajustes por el teclado o el navegador móvil */
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background-color: transparent;
+}
+
+.app-view.active {
+    transform: translateX(0);
+    z-index: 20;
+}
+
+.app-view:not(.active) {
+    transform: translateX(100%);
+}
+
+.view-scroll-content {
+    flex: 1;
+    overflow-y: auto;
+    /* Colchón extra inferior para que el contenido pase limpio sobre los botones de acción */
+    padding: 1.25rem 1.25rem calc(7.5rem + env(safe-area-inset-bottom, 0px)) 1.25rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ==========================================================================
+   CABECERAS (HEADERS) CON RELIEVE Y CRISTAL
+   ========================================================================== */
+.app-header {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 100;
+}
+
+.app-header-back {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: auto 1fr; /* Distribuye espacio asimétrico para no chafar texto */
+    gap: 1rem;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand-icon {
+    background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
+    color: white;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px var(--accent-glow);
+}
+
+.brand h1 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.brand .sub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: block;
+}
+
+.btn-back {
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+.btn-back:active {
+    transform: scale(0.95);
+}
+
+.header-view-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Evita desborde si el título es largo */
+}
+
+/* ==========================================================================
+   FICHAS EN PANTALLA PRINCIPAL (DISEÑO TÁCTIL ELEGANTE)
+   ========================================================================== */
+.dashboard-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inventory-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.inventory-section-header .section-title {
+    margin-bottom: 0;
+}
+
+.filters-pill-box {
+    display: flex;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    padding: 3px;
+    border-radius: 20px;
+}
+
+.filter-btn {
+    border: none;
+    background: transparent;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn.active {
+    background-color: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+.cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.premium-item-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border-rich);
+    border-radius: 16px;
+    padding: 1.15rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-3d-card);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.premium-item-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background-color: var(--accent);
+}
+
+.premium-item-card.ok::before { background-color: var(--success); }
+.premium-item-card.revision::before { background-color: var(--warning); }
+.premium-item-card.taller::before { background-color: var(--danger); }
+
+.premium-item-card:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.card-title-block {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.avatar-wrapper-3d {
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.05);
+}
+
+.premium-item-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.premium-item-card .subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   AVISOS EN DASHBOARD (NOTIFICACIONES 3D)
+   ========================================================================== */
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.alert-item-3d {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.03) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: var(--shadow-3d-card);
+    cursor: pointer;
+}
+
+.alert-item-3d.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.03) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.alert-3d-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.critical .alert-3d-avatar { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); }
+.warning .alert-3d-avatar { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+.alert-item-3d .info h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.alert-item-3d .info p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   PÁGINA DETALLADA PREMIUM (#view-detail)
+   ========================================================================== */
+.detail-hero {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.detail-avatar-container {
+    display: inline-block;
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.detail-avatar-3d {
+    width: 75px;
+    height: 75px;
+    background: linear-gradient(135deg, var(--accent) 0%, #1e40af 100%);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.8rem;
+    box-shadow: 0 10px 25px var(--accent-glow), inset 0 3px 0 rgba(255,255,255,0.3);
+}
+
+.detail-type-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.detail-main-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.detail-specs-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-3d-card);
+}
+
+.specs-box-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.specs-3d-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.spec-item-3d {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    padding: 0.95rem 1.15rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.spec-item-3d .label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.spec-item-3d .value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.status-badge-3d {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+.status-badge-3d.ok { background-color: var(--success); color: white; box-shadow: 0 4px 10px var(--success-glow); }
+.status-badge-3d.revision { background-color: var(--warning); color: #1e1b4b; }
+.status-badge-3d.taller { background-color: var(--danger); color: white; box-shadow: 0 4px 10px var(--danger-glow); }
+
+/* ==========================================================================
+   ESTILOS DE BOTONES CON VOLUMEN 3D (TÁCTILES)
+   ========================================================================== */
+.btn-action-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #1e40af 100%);
+    border: none;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow-3d-btn);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-action-primary:active {
+    transform: scale(0.96);
+    box-shadow: var(--shadow-3d-btn-active);
+}
+
+.btn-3d {
+    padding: 0.95rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn-3d-primary {
+    background: linear-gradient(180deg, var(--accent) 0%, #1d4ed8 100%);
+    color: white;
+    box-shadow: var(--shadow-3d-btn);
+}
+
+.btn-3d-primary:active {
+    transform: scale(0.96);
+    box-shadow: var(--shadow-3d-btn-active);
+}
+
+.btn-3d-success {
+    background: linear-gradient(180deg, var(--success) 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+}
+
+.btn-3d-success:active {
+    transform: scale(0.96);
+}
+
+.btn-3d-danger {
+    background: linear-gradient(180deg, var(--danger) 0%, #dc2626 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+}
+
+.btn-3d-danger:active {
+    transform: scale(0.96);
+}
+
+/* MENÚ ACCIONES FLOTANTE FIJO (SOPORTE ÁREAS SEGURAS) */
+.app-footer-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-top: 1px solid var(--glass-border);
+    /* padding dinámico que respeta el botón físico del móvil o barra de gestos */
+    padding: 1rem 1.25rem calc(1.20rem + env(safe-area-inset-bottom, 0px)) 1.25rem;
+    display: flex;
+    gap: 0.75rem;
+    z-index: 100;
+}
+
+/* ==========================================================================
+   FORMULARIOS Y CAMPOS ADAPTADOS A MÓVIL (SIN DESBORDES)
+   ========================================================================== */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 65px);
+}
+
+.form-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 1.25rem;
+    margin-bottom: 0.85rem;
+    box-shadow: var(--shadow-3d-card);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+/* Evita que se solapen dos elementos anchos en pantallas pequeñas */
+@media (max-width: 400px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.form-group input, 
+.form-group select {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--glass-border-rich);
+    color: white;
+    padding: 0.75rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+/* ==========================================================================
+   REDISERÑO EN REJILLA DE LOS DATOS A CONTROLAR (DATOS DINÁMICOS)
+   ========================================================================== */
+.dynamic-fields-card {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.form-card-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.form-card-header p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.custom-fields-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 0.85rem;
+}
+
+/* Estructura dividida en dos filas para caber bien en pantallas estrechas */
+.custom-field-row {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--glass-border);
+    padding: 0.85rem;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+}
+
+.custom-field-row input {
+    width: 100%;
+    min-width: 0; /* Evita que los inputs empujen hacia la derecha saliéndose del contenedor */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 0.55rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+/* Reubicamos los botones de Alerta y Borrar abajo de sus respectivos inputs */
+.custom-field-row .switch-container,
+.custom-field-row .btn-delete-field {
+    grid-row: 2;
+}
+
+.custom-field-row .switch-container {
+    grid-column: 1;
+    flex-direction: row; /* Alerta + Switch en horizontal */
+    gap: 0.5rem;
+    align-items: center;
+    justify-self: start;
+}
+
+.custom-field-row .btn-delete-field {
+    grid-column: 2;
+    justify-self: end;
+    align-self: center;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    color: var(--danger);
+}
+
+.btn-add-custom-field {
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    border: 1.5px dashed var(--glass-border-rich);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.btn-add-custom-field:active {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Interruptor Switch moderno */
+.switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .3s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--success); }
+input:checked + .slider:before { transform: translateX(14px); }
+.switch-container { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; }
+
+/* ==========================================================================
+   MODALES DE SISTEMA Y ALERTAS (DISEÑO BLUR DE CRISTAL DE ALTA CALIDAD)
+   ========================================================================== */
+.alert-blur-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.alert-blur-overlay.active { display: flex; }
+
+.native-glass-alert {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid var(--glass-border-rich);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    animation: zoomIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.alert-3d-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background-color: rgba(37, 99, 235, 0.1);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem auto 0.75rem auto;
+}
+
+.alert-3d-icon.danger-icon {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+.native-glass-alert h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.native-glass-alert p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0 1.25rem 1.5rem 1.25rem;
+    line-height: 1.4;
+}
+
+.btn-alert-close, .btn-confirm-cancel, .btn-confirm-danger {
+    border: none;
+    background: transparent;
+    border-top: 1px solid var(--glass-border);
+    width: 100%;
+    padding: 1rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.alert-confirm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.btn-confirm-cancel {
+    border-right: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.btn-confirm-danger {
+    color: var(--danger);
+}
+
+/* Clases de utilidad */
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
+.pulse-icon { animation: pulseAnim 2s infinite; }
+
+@keyframes pulseAnim {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
