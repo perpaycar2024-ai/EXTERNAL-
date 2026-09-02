@@ -1,4 +1,4 @@
-const CACHE = 'external-v3';
+const CACHE = 'external-v4';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => self.clients.claim());
 self.addEventListener('fetch', e => {
