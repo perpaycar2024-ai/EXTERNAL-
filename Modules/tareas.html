@@ -147,6 +147,23 @@
   .btn-add-store { width: 100%; background: none; border: 1px dashed var(--border2); border-radius: 10px; padding: 10px; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; margin-top: 4px; }
   .btn-add-store:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* PLANTILLAS */
+  .tpl-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+  .tpl-select { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; }
+  .btn-tpl-save { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 10px; color: var(--text2); font-size: 0.85rem; cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, color 0.2s; }
+  .btn-tpl-save:hover { border-color: var(--accent); color: var(--accent); }
+  .tpl-note { font-size: 0.78rem; color: var(--accent2); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .tpl-save-panel { background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .day-toggle-row { display: flex; gap: 4px; }
+  .day-toggle { flex: 1; text-align: center; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 0; font-size: 0.78rem; color: var(--text3); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  .day-toggle.selected { border-color: var(--accent); color: var(--accent2); background: rgba(74,158,255,0.12); }
+  .tpl-save-actions { display: flex; gap: 8px; }
+  .tpl-save-actions .btn-primary, .tpl-save-actions .btn-secondary { padding: 9px; font-size: 0.85rem; }
+  .tpl-list-manage { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .tpl-manage-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text2); background: var(--bg3); border-radius: 8px; padding: 6px 10px; }
+  .tpl-manage-row .tpl-manage-name { flex: 1; }
+  .tpl-manage-row .tpl-manage-days { color: var(--text3); font-size: 0.75rem; }
+
   /* HISTORIAL */
   .history-empty { text-align: center; color: var(--text3); padding: 40px 20px; font-size: 0.92rem; }
   .history-date-group { margin-bottom: 20px; }
@@ -300,7 +317,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Fecha</label>
-      <input class="form-input" type="date" id="task-date-input">
+      <input class="form-input" type="date" id="task-date-input" onchange="onTaskDateChange()">
     </div>
     <div class="form-group">
       <label class="form-label">Notas</label>
@@ -345,21 +362,16 @@
 </div>
 
 <script>
-// ── DB (memoria compartida EXTERNAL) ────────────────────
-const DB_NAME='external_db', DB_VERSION=2;
-const ST_FOLDERS='tareas_folders', ST_TASKS='tareas_tasks';
+// ── DB ─────────────────────────────────────────────────
+const DB_NAME='tareasApp', DB_VERSION=1;
 let db;
 function openDB() {
   return new Promise((res,rej) => {
     const req=indexedDB.open(DB_NAME,DB_VERSION);
     req.onupgradeneeded=e => {
       const d=e.target.result;
-      if (!d.objectStoreNames.contains(ST_FOLDERS)) d.createObjectStore(ST_FOLDERS,{keyPath:'id'});
-      if (!d.objectStoreNames.contains(ST_TASKS)) { const ts=d.createObjectStore(ST_TASKS,{keyPath:'id'}); ts.createIndex('folderId','folderId'); }
-      if(!d.objectStoreNames.contains('coches')) d.createObjectStore('coches',{keyPath:'id'});
-      if(!d.objectStoreNames.contains('notes')) d.createObjectStore('notes',{keyPath:'id'});
-      if(!d.objectStoreNames.contains('jardinraul_plantas')) d.createObjectStore('jardinraul_plantas',{keyPath:'id'});
-      if(!d.objectStoreNames.contains('jardinraul_config')) d.createObjectStore('jardinraul_config',{keyPath:'id'});
+      if (!d.objectStoreNames.contains('folders')) d.createObjectStore('folders',{keyPath:'id'});
+      if (!d.objectStoreNames.contains('tasks')) { const ts=d.createObjectStore('tasks',{keyPath:'id'}); ts.createIndex('folderId','folderId'); }
     };
     req.onsuccess=e=>{ db=e.target.result; res(db); };
     req.onerror=rej;
@@ -378,7 +390,9 @@ let folders=[], currentFolderId=null, currentTab='pending';
 let editingFolderId=null, editingTaskId=null;
 let selectedEmoji='📋', selectedColor='#4a9eff';
 let customFieldDefs=[], shopEditorData={};
+let tplSavePanelSlug=null, tplSaveDays={}, tplAutoNotes={}, tplEditorData={};
 
+const DAY_LABELS=['D','L','M','X','J','V','S']; // Date.getDay(): 0=domingo...6=sábado
 const EMOJIS=['📋','🛒','🚗','🏠','🌿','💊','📅','✈️','🎯','💡','🔧','📦','🎁','🏥','📚','🍽️','💪','🎵','🐾','⚡'];
 const COLORS=['#4a9eff','#7bbfff','#56d4a0','#f39c12','#e74c3c','#9b59b6','#1abc9c','#e67e22','#ec407a','#00bcd4'];
 
@@ -415,8 +429,8 @@ function openBackupModal() { document.getElementById('modal-backup').classList.a
 function closeBackupModal() { document.getElementById('modal-backup').classList.remove('open'); }
 
 async function exportBackup() {
-  const foldersData=await dbGetAll('tareas_folders');
-  const tasksData=await dbGetAll('tareas_tasks');
+  const foldersData=await dbGetAll('folders');
+  const tasksData=await dbGetAll('tasks');
   const payload={version:1, exportedAt:new Date().toISOString(), folders:foldersData, tasks:tasksData};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -430,62 +444,32 @@ async function exportBackup() {
 async function importBackup(event) {
   const file=event.target.files[0];
   if (!file) return;
-  if (!db) { alert('La base de datos aún no está lista. Espera un momento.'); return; }
-  let text, data;
-  try { text=await file.text(); } catch(e) { alert('No se pudo leer el archivo: '+e.message); return; }
-  try { data=JSON.parse(text); } catch(e) { alert('El archivo no es un JSON válido.'); return; }
-  if (!data.folders||!data.tasks) { alert('Formato incorrecto: faltan carpetas o tareas en el backup.'); return; }
-  const fecha=data.exportedAt?new Date(data.exportedAt).toLocaleDateString('es-ES'):'fecha desconocida';
-  if (!confirm('¿Restaurar backup de '+fecha+'?\n\nCarpetas: '+data.folders.length+'\nTareas: '+data.tasks.length+'\n\nSe perderán los datos actuales.')) {
+  const text=await file.text();
+  let data;
+  try { data=JSON.parse(text); } catch(e) { alert('El archivo no es válido.'); return; }
+  if (!data.folders||!data.tasks) { alert('El archivo no tiene el formato correcto.'); return; }
+  if (!confirm(`¿Restaurar backup de ${data.exportedAt?new Date(data.exportedAt).toLocaleDateString('es-ES'):'fecha desconocida'}?\n\nSe perderán todos los datos actuales.`)) {
     event.target.value=''; return;
   }
-  try {
-    // 1. Limpiar en una sola transacción
-    await new Promise((res,rej)=>{
-      const tx=db.transaction(['tareas_folders','tareas_tasks'],'readwrite');
-      tx.objectStore('tareas_folders').clear();
-      tx.objectStore('tareas_tasks').clear();
-      tx.oncomplete=res;
-      tx.onerror=e=>rej(new Error('Error al limpiar: '+e.target.error));
-      tx.onabort=e=>rej(new Error('Limpieza abortada: '+e.target.error));
-    });
-    // 2. Insertar carpetas en una transacción
-    await new Promise((res,rej)=>{
-      const tx=db.transaction(['tareas_folders'],'readwrite');
-      const st=tx.objectStore('tareas_folders');
-      data.folders.forEach(f=>st.put(f));
-      tx.oncomplete=res;
-      tx.onerror=e=>rej(new Error('Error guardando carpetas: '+e.target.error));
-      tx.onabort=e=>rej(new Error('Carpetas abortadas: '+e.target.error));
-    });
-    // 3. Insertar tareas en una transacción
-    await new Promise((res,rej)=>{
-      const tx=db.transaction(['tareas_tasks'],'readwrite');
-      const st=tx.objectStore('tareas_tasks');
-      data.tasks.forEach(t=>st.put(t));
-      tx.oncomplete=res;
-      tx.onerror=e=>rej(new Error('Error guardando tareas: '+e.target.error));
-      tx.onabort=e=>rej(new Error('Tareas abortadas: '+e.target.error));
-    });
-    event.target.value='';
-    closeBackupModal();
-    await loadFolders();
-    alert('✅ Backup restaurado. Carpetas: '+data.folders.length+', tareas: '+data.tasks.length);
-  } catch(err) {
-    alert('❌ Error durante la restauración:\n'+err.message+'\n\nPor favor, anota este error y dímelo.');
-    event.target.value='';
-  }
+  await dbClear('tasks');
+  await dbClear('folders');
+  for (const f of data.folders) await dbPut('folders',f);
+  for (const t of data.tasks) await dbPut('tasks',t);
+  event.target.value='';
+  closeBackupModal();
+  await loadFolders();
+  alert('✅ Backup restaurado correctamente.');
 }
 
 // ── CARPETAS ───────────────────────────────────────────
-async function loadFolders() { folders=await dbGetAll('tareas_folders'); folders.sort((a,b)=>a.order-b.order); renderFolders(); }
+async function loadFolders() { folders=await dbGetAll('folders'); folders.sort((a,b)=>a.order-b.order); renderFolders(); }
 
 function renderFolders() {
   const grid=document.getElementById('folders-grid'), empty=document.getElementById('folders-empty');
   document.getElementById('header-sub').textContent=`${folders.length} carpeta${folders.length!==1?'s':''}`;
   if (!folders.length) { grid.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  dbGetAll('tareas_tasks').then(all => {
+  dbGetAll('tasks').then(all => {
     grid.innerHTML=folders.map(f => {
       const ft=all.filter(t=>t.folderId===f.id&&!t.done);
       const p=ft.length;
@@ -555,9 +539,9 @@ async function saveFolder() {
   if (editingFolderId) {
     const f=folders.find(x=>x.id===editingFolderId);
     Object.assign(f,{name,emoji:selectedEmoji,color:selectedColor,customFields:cf});
-    await dbPut('tareas_folders',f);
+    await dbPut('folders',f);
   } else {
-    await dbPut('tareas_folders',{id:uid(),name,emoji:selectedEmoji,color:selectedColor,customFields:cf,order:folders.length,createdAt:Date.now()});
+    await dbPut('folders',{id:uid(),name,emoji:selectedEmoji,color:selectedColor,customFields:cf,order:folders.length,createdAt:Date.now()});
   }
   closeFolderModal();
   await loadFolders();
@@ -567,9 +551,9 @@ const editFolder=id=>openFolderModal(id);
 const editCurrentFolder=()=>openFolderModal(currentFolderId);
 async function deleteFolderById(id) {
   if(!confirm('¿Eliminar esta carpeta y todas sus tareas?'))return;
-  const tasks=await dbIdx('tareas_tasks','folderId',id);
-  for(const t of tasks)await dbDel('tareas_tasks',t.id);
-  await dbDel('tareas_folders',id);
+  const tasks=await dbIdx('tasks','folderId',id);
+  for(const t of tasks)await dbDel('tasks',t.id);
+  await dbDel('folders',id);
   folders=folders.filter(f=>f.id!==id);
   renderFolders();
 }
@@ -592,7 +576,7 @@ async function renderFolderDetail(){
   const f=folders.find(x=>x.id===currentFolderId);if(!f)return;
   document.getElementById('detail-emoji').textContent=f.emoji;
   document.getElementById('detail-name').textContent=f.name;
-  const all=await dbIdx('tareas_tasks','folderId',currentFolderId);
+  const all=await dbIdx('tasks','folderId',currentFolderId);
   document.getElementById('detail-stats').textContent=`${all.filter(t=>!t.done).length} pendientes · ${all.filter(t=>t.done).length} completadas`;
   switchTab(currentTab,all);
 }
@@ -603,7 +587,7 @@ function switchTab(tab,tasks=null){
   document.getElementById('tab-content-pending').style.display=tab==='pending'?'':'none';
   document.getElementById('tab-content-history').style.display=tab==='history'?'':'none';
   if(tasks){tab==='pending'?renderTaskList(tasks.filter(t=>!t.done)):renderHistory(tasks.filter(t=>t.done));}
-  else dbIdx('tareas_tasks','folderId',currentFolderId).then(all=>{tab==='pending'?renderTaskList(all.filter(t=>!t.done)):renderHistory(all.filter(t=>t.done));});
+  else dbIdx('tasks','folderId',currentFolderId).then(all=>{tab==='pending'?renderTaskList(all.filter(t=>!t.done)):renderHistory(all.filter(t=>t.done));});
 }
 function renderTaskList(tasks){
   const list=document.getElementById('tasks-list'),empty=document.getElementById('tasks-empty');
@@ -678,12 +662,12 @@ function taskCardHTML(t,folder,isHistory){
 }
 
 async function toggleShopItem(taskId,fieldName,si,ii){
-  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===taskId);
+  const all=await dbGetAll('tasks'),t=all.find(x=>x.id===taskId);
   const stores=t.custom[fieldName];
   if(!stores||!stores[si])return;
   if(!stores[si].itemsChecked)stores[si].itemsChecked=[];
   stores[si].itemsChecked[ii]=!stores[si].itemsChecked[ii];
-  await dbPut('tareas_tasks',t);renderFolderDetail();
+  await dbPut('tasks',t);renderFolderDetail();
 }
 
 // ── TAREAS ─────────────────────────────────────────────
@@ -693,7 +677,8 @@ function openTaskModal(editId=null){
   document.getElementById('task-modal-title').textContent=editId?'Editar tarea':'Nueva tarea';
   const shopFields=(folder&&folder.customFields||[]).filter(f=>f.type==='shoplist'&&f.name);
   if(editId){
-    dbGetAll('tareas_tasks').then(all=>{
+    tplAutoNotes={};
+    dbGetAll('tasks').then(all=>{
       const t=all.find(x=>x.id===editId);
       document.getElementById('task-title-input').value=t.title;
       document.getElementById('task-date-input').value=t.date||'';
@@ -709,7 +694,10 @@ function openTaskModal(editId=null){
     document.getElementById('task-title-input').value='';
     document.getElementById('task-date-input').value='';
     document.getElementById('task-notes-input').value='';
-    shopFields.forEach(f=>{shopEditorData[slugify(f.name)]=[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];});
+    tplAutoNotes={};
+    shopFields.forEach(f=>{
+      shopEditorData[slugify(f.name)]=[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];
+    });
     buildCustomTaskInputs(folder,{});
     document.getElementById('modal-task').classList.add('open');
   }
@@ -735,10 +723,156 @@ function buildCustomTaskInputs(folder,values){
   fields.filter(f=>f.type==='shoplist'&&f.name).forEach(f=>renderShopEditor(slugify(f.name)));
 }
 
+function getFolderTemplates(slug){
+  const folder=folders.find(f=>f.id===currentFolderId);
+  return (folder&&folder.templates&&folder.templates[slug])||[];
+}
+async function persistTemplates(slug,list){
+  const folder=folders.find(f=>f.id===currentFolderId);
+  if(!folder)return;
+  if(!folder.templates)folder.templates={};
+  folder.templates[slug]=list;
+  await dbPut('folders',folder);
+}
+function renderTemplateBar(slug){
+  const bar=document.getElementById(`tpl-bar-${slug}`);if(!bar)return;
+  const tpls=getFolderTemplates(slug);
+  const note=tplAutoNotes[slug];
+  bar.innerHTML=`
+    ${note?`<div class="tpl-note">✓ ${esc(note)}</div>`:''}
+    <div class="tpl-bar">
+      <select class="tpl-select" onchange="if(this.value){applyTemplate('${slug}',this.value);this.value='';}">
+        <option value="">${tpls.length?'Aplicar plantilla…':'Sin plantillas guardadas'}</option>
+        ${tpls.map(t=>`<option value="${t.id}">${esc(t.name)}${t.days.length?' ('+t.days.map(d=>DAY_LABELS[d]).join('')+')':''}</option>`).join('')}
+      </select>
+      <button class="btn-tpl-save" onclick="toggleTplSavePanel('${slug}')">💾</button>
+    </div>
+    <div id="tpl-save-panel-${slug}"></div>
+    ${tpls.length?`<div class="tpl-list-manage">${tpls.map(t=>`
+      <div class="tpl-manage-row">
+        <span class="tpl-manage-name">${esc(t.name)}</span>
+        <span class="tpl-manage-days">${t.days.length?t.days.map(d=>DAY_LABELS[d]).join(''):'sin días'}</span>
+        <button class="btn-icon del" onclick="deleteTemplate('${slug}','${t.id}')">✕</button>
+      </div>`).join('')}</div>`:''}
+  `;
+}
+function toggleTplSavePanel(slug){
+  const panel=document.getElementById(`tpl-save-panel-${slug}`);if(!panel)return;
+  if(tplSavePanelSlug===slug){tplSavePanelSlug=null;panel.innerHTML='';return;}
+  tplSavePanelSlug=slug;tplSaveDays[slug]=tplSaveDays[slug]||[];
+  tplEditorData[slug]=[{store:'',items:[{name:'',qty:''}]}];
+  panel.innerHTML=`
+    <div class="tpl-save-panel">
+      <input class="form-input" id="tpl-name-${slug}" placeholder="Nombre de la plantilla (ej: Ruta L/X/V)">
+      <div class="day-toggle-row" id="tpl-days-${slug}">
+        ${DAY_LABELS.map((l,i)=>`<div class="day-toggle" onclick="toggleTplDay('${slug}',${i})">${l}</div>`).join('')}
+      </div>
+      <div id="tpl-stores-${slug}"></div>
+      <button class="btn-add-store" onclick="addTplStore('${slug}')">＋ Añadir establecimiento</button>
+      ${(shopEditorData[slug]||[]).some(st=>st.store||(st.items||[]).some(i=>i.name.trim()))?`<button class="btn-tpl-save" style="width:100%" onclick="copyFromFormToTpl('${slug}')">📋 Copiar lo que hay en este formulario</button>`:''}
+      <div class="tpl-save-actions">
+        <button class="btn-secondary" style="flex:1" onclick="toggleTplSavePanel('${slug}')">Cancelar</button>
+        <button class="btn-primary" style="flex:1" onclick="confirmSaveTemplate('${slug}')">Guardar plantilla</button>
+      </div>
+    </div>`;
+  renderTplStoreEditor(slug);
+}
+function renderTplStoreEditor(slug){
+  const container=document.getElementById(`tpl-stores-${slug}`);if(!container)return;
+  const stores=tplEditorData[slug]||[];
+  container.innerHTML=stores.map((st,si)=>`
+    <div class="shop-store-editor">
+      <div class="shop-store-editor-header">
+        <span>🏪</span>
+        <input class="form-input" placeholder="Mercadona, Mercado, Lidl…" value="${esc(st.store)}" oninput="tplEditorData['${slug}'][${si}].store=this.value">
+        ${stores.length>1?`<button class="btn-icon del" onclick="removeTplStore('${slug}',${si})">✕</button>`:''}
+      </div>
+      <div class="shop-items-editor">
+        ${(st.items||[]).map((item,ii)=>`
+          <div class="shop-item-row">
+            <input class="form-input item-name" placeholder="Artículo" value="${esc(item.name)}" oninput="tplEditorData['${slug}'][${si}].items[${ii}].name=this.value">
+            <input class="form-input item-qty" placeholder="Cant." value="${esc(item.qty)}" oninput="tplEditorData['${slug}'][${si}].items[${ii}].qty=this.value">
+            ${st.items.length>1?`<button class="btn-icon del" onclick="removeTplItem('${slug}',${si},${ii})">✕</button>`:''}
+          </div>`).join('')}
+        <button class="btn-add-item" onclick="addTplItem('${slug}',${si})">＋ Añadir artículo</button>
+      </div>
+    </div>`).join('');
+}
+function addTplStore(slug){if(!tplEditorData[slug])tplEditorData[slug]=[];tplEditorData[slug].push({store:'',items:[{name:'',qty:''}]});renderTplStoreEditor(slug);}
+function removeTplStore(slug,si){tplEditorData[slug].splice(si,1);renderTplStoreEditor(slug);}
+function addTplItem(slug,si){tplEditorData[slug][si].items.push({name:'',qty:''});renderTplStoreEditor(slug);}
+function removeTplItem(slug,si,ii){tplEditorData[slug][si].items.splice(ii,1);renderTplStoreEditor(slug);}
+function copyFromFormToTpl(slug){
+  tplEditorData[slug]=JSON.parse(JSON.stringify((shopEditorData[slug]||[]).map(st=>({store:st.store,items:(st.items||[]).map(i=>({name:i.name,qty:i.qty}))}))));
+  if(!tplEditorData[slug].length)tplEditorData[slug]=[{store:'',items:[{name:'',qty:''}]}];
+  renderTplStoreEditor(slug);
+}
+function toggleTplDay(slug,day){
+  const arr=tplSaveDays[slug]||(tplSaveDays[slug]=[]);
+  const idx=arr.indexOf(day);
+  if(idx>-1)arr.splice(idx,1);else arr.push(day);
+  const btns=document.querySelectorAll(`#tpl-days-${slug} .day-toggle`);
+  btns.forEach((b,i)=>b.classList.toggle('selected',arr.includes(i)));
+}
+async function confirmSaveTemplate(slug){
+  const nameEl=document.getElementById(`tpl-name-${slug}`);
+  const name=nameEl.value.trim();
+  if(!name){nameEl.focus();return;}
+  const days=(tplSaveDays[slug]||[]).slice().sort();
+  const stores=JSON.parse(JSON.stringify((tplEditorData[slug]||[]).map(st=>({store:st.store,items:(st.items||[]).filter(i=>i.name.trim())})).filter(st=>st.store||st.items.length)));
+  const tpls=getFolderTemplates(slug);
+  tpls.push({id:uid(),name,days,stores});
+  await persistTemplates(slug,tpls);
+  tplSaveDays[slug]=[];tplEditorData[slug]=[];
+  toggleTplSavePanel(slug);
+  renderTemplateBar(slug);
+}
+async function deleteTemplate(slug,id){
+  if(!confirm('¿Eliminar esta plantilla?'))return;
+  const tpls=getFolderTemplates(slug).filter(t=>t.id!==id);
+  await persistTemplates(slug,tpls);
+  renderTemplateBar(slug);
+}
+function isShopFieldEmpty(slug){
+  const stores=shopEditorData[slug]||[];
+  return !stores.some(st=>(st.store||'').trim()||(st.items||[]).some(i=>(i.name||'').trim()));
+}
+function onTaskDateChange(){
+  const folder=folders.find(f=>f.id===currentFolderId);if(!folder)return;
+  const dateStr=document.getElementById('task-date-input').value;
+  const shopFields=(folder.customFields||[]).filter(f=>f.type==='shoplist'&&f.name);
+  if(!dateStr){
+    shopFields.forEach(f=>{delete tplAutoNotes[slugify(f.name)];});
+    shopFields.forEach(f=>renderTemplateBar(slugify(f.name)));
+    return;
+  }
+  const day=new Date(dateStr+'T00:00:00').getDay();
+  shopFields.forEach(f=>{
+    const slug=slugify(f.name);
+    if(!isShopFieldEmpty(slug))return; // no pisar datos ya metidos a mano
+    const matches=((folder.templates&&folder.templates[slug])||[]).filter(t=>t.days.includes(day));
+    if(matches.length===1){
+      const tpl=matches[0];
+      shopEditorData[slug]=tpl.stores.length?JSON.parse(JSON.stringify(tpl.stores)).map(st=>({...st,itemsChecked:[]})):[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];
+      tplAutoNotes[slug]=`Plantilla "${tpl.name}" aplicada automáticamente`;
+    } else {
+      delete tplAutoNotes[slug];
+    }
+    renderShopEditor(slug);
+  });
+}
+function applyTemplate(slug,templateId){
+  const tpl=getFolderTemplates(slug).find(t=>t.id===templateId);if(!tpl)return;
+  shopEditorData[slug]=tpl.stores.length?JSON.parse(JSON.stringify(tpl.stores)).map(st=>({...st,itemsChecked:[]})):[{store:'',items:[{name:'',qty:''}],itemsChecked:[]}];
+  delete tplAutoNotes[slug];
+  renderShopEditor(slug);
+}
+
 function renderShopEditor(slug){
   const container=document.getElementById(`shop-editor-${slug}`);if(!container)return;
   const stores=shopEditorData[slug]||[];
-  container.innerHTML=stores.map((st,si)=>`
+  const tplBarHTML=`<div id="tpl-bar-${slug}"></div>`;
+  container.innerHTML=tplBarHTML+stores.map((st,si)=>`
     <div class="shop-store-editor">
       <div class="shop-store-editor-header">
         <span>🏪</span>
@@ -755,6 +889,7 @@ function renderShopEditor(slug){
         <button class="btn-add-item" onclick="addItem('${slug}',${si})">＋ Añadir artículo</button>
       </div>
     </div>`).join('');
+  renderTemplateBar(slug);
 }
 function addStore(slug){if(!shopEditorData[slug])shopEditorData[slug]=[];shopEditorData[slug].push({store:'',items:[{name:'',qty:''}],itemsChecked:[]});renderShopEditor(slug);}
 function removeStore(slug,si){shopEditorData[slug].splice(si,1);renderShopEditor(slug);}
@@ -779,28 +914,28 @@ async function saveTask(){
   const date=document.getElementById('task-date-input').value||null;
   const notes=document.getElementById('task-notes-input').value.trim()||null;
   if(editingTaskId){
-    const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===editingTaskId);
+    const all=await dbGetAll('tasks'),t=all.find(x=>x.id===editingTaskId);
     Object.assign(t,{title,date,notes,custom});
-    await dbPut('tareas_tasks',t);
+    await dbPut('tasks',t);
   } else {
-    await dbPut('tareas_tasks',{id:uid(),folderId:currentFolderId,title,date,notes,custom,done:false,createdAt:Date.now(),doneAt:null});
+    await dbPut('tasks',{id:uid(),folderId:currentFolderId,title,date,notes,custom,done:false,createdAt:Date.now(),doneAt:null});
   }
   closeTaskModal();renderFolderDetail();
 }
 const editTask=id=>openTaskModal(id);
 async function toggleTask(id){
-  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===id);
+  const all=await dbGetAll('tasks'),t=all.find(x=>x.id===id);
   t.done=!t.done;t.doneAt=t.done?Date.now():null;
-  await dbPut('tareas_tasks',t);renderFolderDetail();
+  await dbPut('tasks',t);renderFolderDetail();
 }
 async function restoreTask(id){
-  const all=await dbGetAll('tareas_tasks'),t=all.find(x=>x.id===id);
+  const all=await dbGetAll('tasks'),t=all.find(x=>x.id===id);
   t.done=false;t.doneAt=null;
-  await dbPut('tareas_tasks',t);renderFolderDetail();
+  await dbPut('tasks',t);renderFolderDetail();
 }
 async function deleteTask(id){
   if(!confirm('¿Eliminar esta tarea?'))return;
-  await dbDel('tareas_tasks',id);renderFolderDetail();
+  await dbDel('tasks',id);renderFolderDetail();
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el=>{
@@ -809,36 +944,12 @@ document.querySelectorAll('.modal-overlay').forEach(el=>{
 
 openDB().then(loadFolders);
 
-// ── NAVEGACIÓN DESDE EXTERNAL ──────────────────────────
-window.addEventListener('message', async e=>{
-  if(!e.data||e.data.tipo!=='irA') return;
-  const {taskId,folderId}=e.data;
-  if(!taskId||!folderId) return;
-  // Esperar a que folders esté cargado
-  if(!folders.length) await loadFolders();
-  await openFolder(folderId);
-  // Dar un tick para que renderFolderDetail termine
-  setTimeout(()=>openTaskModal(taskId), 80);
-});
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .catch(err => console.warn('SW no registrado:', err));
   });
 }
-
-// ── EXTERNAL: navegación desde buscador ──────────────────
-window.addEventListener('message', async e => {
-  if (!e.data || e.data.type !== 'EXTERNAL_NAV') return;
-  const {itemId, folderId} = e.data;
-  if (!db) { setTimeout(() => window.dispatchEvent(new MessageEvent('message', {data: e.data})), 300); return; }
-  if (folderId) {
-    await loadFolders();
-    await openFolder(folderId);
-    if (itemId) setTimeout(() => openTaskModal(itemId), 120);
-  }
-});
 </script>
 </body>
 </html>
