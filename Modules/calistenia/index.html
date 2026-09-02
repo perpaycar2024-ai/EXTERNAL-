@@ -1,1 +1,937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CALISTENIA PRO</title>
+<link rel="manifest" href="/calistenia/manifest.json">
+<meta name="theme-color" content="#0e0e0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calistenia">
+<link rel="apple-touch-icon" href="/calistenia/icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0e0e; --surface:#161616; --surface2:#1f1f1f; --border:#2a2a2a;
+    --accent:#e8ff00; --accent2:#ff6b35; --rest:#00d4aa; --text:#f0f0f0;
+    --muted:#666; --danger:#ff4545; --radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;outline:none;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;-webkit-tap-highlight-color:transparent;}
+  .view{display:none;height:100vh;flex-direction:column;overflow:hidden;}
+  .view.active{display:flex;}
+  #view-home{overflow-y:auto;}
 
+  /* HOME */
+  #view-home{padding:24px 20px;gap:20px;overflow-y:auto;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;letter-spacing:2px;}
+  .logo span{color:var(--accent);}
+  .home-tabs{display:flex;gap:4px;background:var(--surface);border-radius:10px;padding:4px;}
+  .tab-btn{flex:1;padding:10px;border:none;border-radius:7px;color:var(--muted);background:none;cursor:pointer;font-size:13px;}
+  .tab-btn.active{background:var(--surface2);color:var(--text);}
+  .tab-panel{display:none;flex-direction:column;gap:12px;margin-top:10px;}
+  .tab-panel.active{display:flex;}
+  .item-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px;display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+
+  /* SEMANA */
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .day-cell{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:90px;cursor:pointer;user-select:none;-webkit-user-select:none;}
+  .day-cell.has-routine{border-color:var(--accent);background:rgba(232,255,0,0.05);}
+  .day-label{font-family:'Bebas Neue';font-size:11px;color:var(--muted);}
+  .day-tag{font-size:9px;color:var(--accent2);font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96%;padding:0 2px;line-height:1.2;}
+  .day-count{font-size:9px;color:var(--muted);}
+
+  /* EDITOR RUTINA */
+  .editor-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px;}
+  input,textarea,select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;width:100%;font-family:inherit;}
+  select option{background:var(--surface2);}
+  .exercise-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:15px;}
+  .phrase-row{display:flex;gap:8px;margin-top:8px;align-items:center;background:var(--surface2);padding:6px;border-radius:6px;}
+
+  /* WORKOUT */
+  #view-workout{background:#000;text-align:center;justify-content:center;gap:0;}
+  .timer-number{font-family:'Bebas Neue';font-size:120px;line-height:1;}
+  .phase-badge{font-family:'Bebas Neue';padding:5px 20px;border-radius:20px;border:1px solid;margin-bottom:10px;letter-spacing:2px;}
+  .phase-badge.exercise{color:var(--accent);border-color:var(--accent);}
+  .phase-badge.rest{color:var(--rest);border-color:var(--rest);}
+  .phase-badge.prep{color:var(--muted);border-color:var(--muted);}
+  #workout-session-info{font-size:11px;color:var(--muted);margin-bottom:2px;min-height:16px;letter-spacing:1px;}
+  #workout-round-info{font-family:'Bebas Neue';font-size:18px;color:var(--accent2);letter-spacing:2px;margin-bottom:6px;min-height:24px;}
+  #music-indicator{font-size:11px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px;}
+  #music-indicator .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;animation:pulse 1.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  /* MÚSICA */
+  .music-upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;cursor:pointer;}
+  .music-upload-zone input[type=file]{display:none;}
+  .track-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+  .track-name{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .track-dur{font-size:11px;color:var(--muted);min-width:38px;text-align:right;}
+
+  /* MODAL DÍA */
+  .day-routine-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:10px;padding:13px;margin-bottom:8px;}
+  .drr-name{flex:1;font-size:14px;}
+  .warmup-badge{font-size:10px;color:var(--accent2);padding:2px 7px;border-radius:4px;border:1px solid var(--accent2);white-space:nowrap;flex-shrink:0;}
+  .reps-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .reps-ctrl button{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:none;color:white;font-size:18px;cursor:pointer;line-height:1;}
+  .reps-val{font-family:'Bebas Neue';font-size:22px;color:var(--accent);min-width:24px;text-align:center;}
+
+  /* MODALES */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:flex-end;z-index:1000;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:var(--bg);width:100%;padding:25px;border-radius:25px 25px 0 0;max-height:85vh;overflow-y:auto;}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="view-home" class="view active">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+    <div class="logo">CALIS<span>TENIA</span></div>
+    <button onclick="openEditor(null)" style="background:var(--accent);border:none;padding:10px 18px;border-radius:8px;font-weight:bold;">+ NUEVA</button>
+  </div>
+  <div class="home-tabs">
+    <button class="tab-btn active" onclick="switchTab('routines')">Rutinas</button>
+    <button class="tab-btn" onclick="switchTab('week')">Semana</button>
+    <button class="tab-btn" onclick="switchTab('history')">Historial</button>
+    <button class="tab-btn" onclick="switchTab('music')">🎵</button>
+  </div>
+  <div id="tab-routines" class="tab-panel active"><div id="routines-list"></div></div>
+  <div id="tab-week"     class="tab-panel"><div id="week-grid" class="week-grid"></div></div>
+  <div id="tab-history"  class="tab-panel"><div id="history-list"></div></div>
+  <div id="tab-music"    class="tab-panel">
+    <div class="music-upload-zone" onclick="document.getElementById('file-input-music').click()">
+      <input type="file" id="file-input-music" accept="audio/*" multiple onchange="handleMusicUpload(this.files)">
+      <div style="font-size:32px;margin-bottom:8px;">🎵</div>
+      <div style="font-weight:bold;">Añadir música</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">MP3, OGG, AAC, WAV...</div>
+    </div>
+    <div id="tracks-list"></div>
+  </div>
+</div>
+
+<!-- EDITOR RUTINA -->
+<div id="view-editor" class="view">
+  <div class="editor-body">
+    <h2 style="font-family:'Bebas Neue'">CONFIGURACIÓN</h2>
+    <input type="text" id="edit-name" placeholder="Nombre de la Rutina">
+    <textarea id="edit-desc" placeholder="Nota de voz inicial (al empezar)"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--muted)">Descanso global (seg):</span>
+      <input type="number" id="edit-rest" value="30" style="width:80px">
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🎵 Pista de música (opcional)</div>
+      <select id="edit-track"><option value="">— Sin música —</option></select>
+    </div>
+    <div id="edit-exercises-list"></div>
+    <button onclick="addExerciseField()" style="padding:15px;background:var(--surface2);border:1px dashed var(--border);color:var(--muted);border-radius:10px;">+ Añadir Ejercicio</button>
+  </div>
+  <div style="padding:20px;display:flex;gap:10px;">
+    <button onclick="goHome()" style="flex:1;padding:18px;border-radius:12px;background:var(--surface);border:none;color:white;">CANCELAR</button>
+    <button onclick="saveRoutine()" style="flex:2;padding:18px;border-radius:12px;background:var(--accent);border:none;color:black;font-weight:bold;">GUARDAR</button>
+  </div>
+</div>
+
+<!-- WORKOUT -->
+<div id="view-workout" class="view">
+  <div id="workout-session-info"></div>
+  <div id="workout-round-info"></div>
+  <div id="music-indicator" style="display:none"><span class="dot"></span> <span id="music-track-name"></span></div>
+  <div id="phase-badge" class="phase-badge prep">PREP</div>
+  <div id="current-ex-name" style="font-family:'Bebas Neue';font-size:42px;padding:0 20px;">-</div>
+  <div id="timer-display" class="timer-number">0</div>
+  <div id="next-hint" style="color:var(--muted);margin-bottom:40px;">Siguiente: -</div>
+  <div style="display:flex;gap:15px;padding:0 30px;">
+    <button onclick="togglePause()" id="btn-pause" style="flex:1;padding:20px;border-radius:15px;background:var(--surface);color:white;border:1px solid var(--border);">PAUSA</button>
+    <button onclick="stopWorkout()" style="width:65px;border-radius:15px;background:var(--danger);border:none;color:white;font-size:20px;">✕</button>
+  </div>
+</div>
+
+<!-- MODAL: PREVIEW RUTINA INDIVIDUAL (desde pestaña Rutinas) -->
+<div id="modal-preview" class="modal-overlay" onclick="this.classList.remove('open')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <h2 id="pre-name" style="font-family:'Bebas Neue';font-size:32px;margin-bottom:20px;">-</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);padding:15px;border-radius:12px;margin-bottom:20px;">
+      <span>Vueltas al circuito:</span>
+      <div class="reps-ctrl">
+        <button onclick="changePreviewReps(-1)">-</button>
+        <span class="reps-val" id="pre-reps">1</span>
+        <button onclick="changePreviewReps(1)">+</button>
+      </div>
+    </div>
+    <button onclick="confirmPreviewStart()" style="width:100%;padding:20px;background:var(--accent);color:black;font-weight:bold;border-radius:12px;border:none;">¡EMPEZAR!</button>
+  </div>
+</div>
+
+<!-- MODAL: PREVIEW DÍA (tap corto en semana) -->
+<div id="modal-day-preview" class="modal-overlay" onclick="this.classList.remove('open')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2 id="dp-title" style="font-family:'Bebas Neue';font-size:28px;">-</h2>
+      <button onclick="closeDayPreviewOpenEditor()" style="background:var(--surface2);border:none;color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;">✏️ Editar</button>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:16px;">Ajusta las vueltas de cada rutina y empieza</p>
+    <div id="dp-routines"></div>
+    <button onclick="confirmDayStart()" style="width:100%;padding:20px;background:var(--accent);color:black;font-weight:bold;border-radius:12px;border:none;margin-top:10px;">¡EMPEZAR DÍA!</button>
+  </div>
+</div>
+
+<!-- MODAL: EDITOR DÍA (tap largo en semana) -->
+<div id="modal-day-editor" class="modal-overlay" onclick="this.classList.remove('open')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <h2 style="font-family:'Bebas Neue';font-size:26px;margin-bottom:16px;">EDITAR DÍA</h2>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Nombre del día (opcional)</div>
+      <input type="text" id="de-label" placeholder="Ej: Glúteos, Piernas, Cardio...">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+      Rutinas del día &nbsp;<span style="color:var(--accent2)">← la primera es el calentamiento (1 vuelta siempre)</span>
+    </div>
+    <div id="de-routine-list"></div>
+    <div style="font-size:12px;color:var(--muted);margin:14px 0 6px;">Añadir rutina:</div>
+    <div id="de-add-options"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="clearDayAndClose()" style="flex:1;padding:14px;border-radius:12px;border:1px dashed var(--danger);color:var(--danger);background:none;cursor:pointer;">Vaciar día</button>
+      <button onclick="saveDayEditor()" style="flex:2;padding:14px;border-radius:12px;background:var(--accent);border:none;color:black;font-weight:bold;cursor:pointer;">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  alert('ERROR JS:\n' + msg + '\nLinea: ' + line);
+  return false;
+};
+// =============================================================
+// ESTADO GLOBAL
+// =============================================================
+var routines = JSON.parse(localStorage.getItem('cali_final_v10_r') || '[]');
+var workoutHistory = JSON.parse(localStorage.getItem('cali_final_v10_h') || '[]');
+
+// weekPlan v11: { idx: { label: '', routineIds: [], reps: { rid: N } } }
+var weekPlan = JSON.parse(localStorage.getItem('cali_final_v11_w') || '{}');
+
+// Migración: si había plan v10 con strings simples, convertir
+(function migratePlan() {
+  var old = localStorage.getItem('cali_final_v10_w');
+  if (!old) return;
+  try {
+    var p = JSON.parse(old);
+    var needsMig = Object.keys(p).some(function(k){ return typeof p[k] === 'string'; });
+    if (!needsMig) return;
+    var m = {};
+    Object.keys(p).forEach(function(k){
+      m[k] = typeof p[k] === 'string'
+        ? { label:'', routineIds:[p[k]], reps:{} }
+        : p[k];
+    });
+    weekPlan = m;
+    localStorage.setItem('cali_final_v11_w', JSON.stringify(weekPlan));
+  } catch(e){}
+})();
+
+var editingId = null;
+var selectedDayIdx = null;
+var currentRoutine = null;
+var previewReps = 1;
+var timer = null, phases = [], pIdx = 0, timeLeft = 0, isPaused = false, totalReps = 1;
+var sessionQueue = [], sessionQueueIdx = 0, sessionDayLabel = '';
+
+// =============================================================
+// INDEXEDDB — MÚSICA
+// =============================================================
+var db = null;
+var DB_NAME = 'cali_music_db', STORE = 'tracks';
+
+function openDB() {
+  return new Promise(function(res, rej) {
+    var req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function(e){ e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); };
+    req.onsuccess = function(e){ db = e.target.result; res(db); };
+    req.onerror   = function(){ rej(req.error); };
+  });
+}
+function dbAll(){ return new Promise(function(r,j){ var q=db.transaction(STORE,'readonly').objectStore(STORE).getAll(); q.onsuccess=function(){r(q.result);}; q.onerror=function(){j(q.error);}; }); }
+function dbGet(id){ return new Promise(function(r,j){ var q=db.transaction(STORE,'readonly').objectStore(STORE).get(id); q.onsuccess=function(){r(q.result);}; q.onerror=function(){j(q.error);}; }); }
+function dbAdd(obj){ return new Promise(function(r,j){ var q=db.transaction(STORE,'readwrite').objectStore(STORE).add(obj); q.onsuccess=function(){r(q.result);}; q.onerror=function(){j(q.error);}; }); }
+function dbDel(id){ return new Promise(function(r,j){ var q=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id); q.onsuccess=function(){r();}; q.onerror=function(){j(q.error);}; }); }
+
+function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+function fmtDur(s){ if(!s) return '--:--'; return Math.floor(s/60)+':'+pad2(s%60); }
+
+function arrIncludes(arr, val){ return arr.indexOf(val) !== -1; }
+
+function handleMusicUpload(files) {
+  var i = 0;
+  function next() {
+    if (i >= files.length) { renderTracks(); populateTrackSelect(); return; }
+    var file = files[i++];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var audio = new Audio(e.target.result);
+      var data = e.target.result;
+      var name = file.name.replace(/\.[^.]+$/,'');
+      var onMeta = function(){
+        var dur = isNaN(audio.duration)?0:Math.round(audio.duration);
+        dbAdd({ name:name, data:data, duration:dur }).then(next);
+      };
+      audio.onloadedmetadata = onMeta;
+      audio.onerror = onMeta;
+    };
+    reader.readAsDataURL(file);
+  }
+  next();
+}
+
+function renderTracks() {
+  dbAll().then(function(tracks){
+    var list = document.getElementById('tracks-list');
+    if (!tracks.length) {
+      list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px;">Sin pistas guardadas</div>';
+      return;
+    }
+    list.innerHTML = tracks.map(function(t){
+      return '<div class="track-card">'
+        +'<div style="font-size:22px;">🎵</div>'
+        +'<div class="track-name">'+t.name+'</div>'
+        +'<div class="track-dur">'+fmtDur(t.duration)+'</div>'
+        +'<button onclick="previewTrack('+t.id+')" style="background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer;">▶</button>'
+        +'<button onclick="deleteTrack('+t.id+')" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;">✕</button>'
+        +'</div>';
+    }).join('');
+  });
+}
+
+function populateTrackSelect() {
+  dbAll().then(function(tracks){
+    var sel = document.getElementById('edit-track');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">— Sin música —</option>'
+      + tracks.map(function(t){ return '<option value="'+t.id+'">'+t.name+'</option>'; }).join('');
+    if (cur) sel.value = cur;
+    // Si estamos editando una rutina, restaurar la pista seleccionada
+    if (editingId) {
+      var r = routines.find(function(x){ return x.id===editingId; });
+      if (r && r.trackId) sel.value = r.trackId;
+    }
+  });
+}
+
+var previewAudio = null;
+function previewTrack(id) {
+  if (previewAudio){ previewAudio.pause(); previewAudio=null; }
+  dbGet(id).then(function(t){
+    previewAudio = new Audio(t.data);
+    previewAudio.play();
+  });
+}
+function deleteTrack(id) {
+  if (!confirm('¿Borrar esta pista?')) return;
+  dbDel(id).then(function(){ renderTracks(); populateTrackSelect(); });
+}
+
+// =============================================================
+// MÚSICA EN WORKOUT (ducking)
+// =============================================================
+var musicAudio = null, musicDucked = false;
+var MUSIC_NORMAL = 0.75, MUSIC_DUCK = 0.12, DUCK_MS = 300;
+
+function startMusic(trackId) {
+  stopMusic();
+  if (!trackId) return;
+  dbGet(Number(trackId)).then(function(t){
+    if (!t) return;
+    musicAudio = new Audio(t.data);
+    musicAudio.loop = true;
+    musicAudio.volume = MUSIC_NORMAL;
+    musicAudio.play().catch(function(){});
+    document.getElementById('music-track-name').textContent = t.name;
+    document.getElementById('music-indicator').style.display = 'flex';
+  });
+}
+function stopMusic() {
+  if (musicAudio){ musicAudio.pause(); musicAudio=null; }
+  document.getElementById('music-indicator').style.display = 'none';
+  musicDucked = false;
+}
+function duckMusic()   { if(!musicAudio||musicDucked) return; musicDucked=true;  fadeMusicVol(MUSIC_DUCK,DUCK_MS); }
+function unduckMusic() { if(!musicAudio||!musicDucked) return; musicDucked=false; fadeMusicVol(MUSIC_NORMAL,DUCK_MS); }
+function fadeMusicVol(target,ms) {
+  if (!musicAudio) return;
+  var start=musicAudio.volume, steps=20, iv=ms/steps, delta=(target-start)/steps, step=0;
+  var fade=setInterval(function(){
+    step++;
+    if(!musicAudio){clearInterval(fade);return;}
+    musicAudio.volume=Math.max(0,Math.min(1,start+delta*step));
+    if(step>=steps) clearInterval(fade);
+  },iv);
+}
+
+// =============================================================
+// VOZ
+// =============================================================
+function speak(t) {
+  duckMusic();
+  if (!isNaN(t)) window.speechSynthesis.cancel();
+  var m = new SpeechSynthesisUtterance(String(t));
+  m.lang='es-ES'; m.rate=1.1;
+  m.onend  = function(){ unduckMusic(); };
+  m.onerror= function(){ unduckMusic(); };
+  window.speechSynthesis.speak(m);
+}
+
+// =============================================================
+// SEMANA — RENDER + GESTOS
+// =============================================================
+function renderWeek() {
+  var days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  document.getElementById('week-grid').innerHTML = days.map(function(d,i){
+    var plan = weekPlan[i];
+    var has  = plan && plan.routineIds && plan.routineIds.length>0;
+    var label= has && plan.label ? plan.label : '';
+    var count= has ? plan.routineIds.length : 0;
+    return '<div class="day-cell '+(has?'has-routine':'')+'" '
+      +'onmousedown="handleDayStart('+i+')" onmouseup="handleDayEnd('+i+')" onmouseleave="handleDayLeave()" '
+      +'ontouchstart="handleDayStart('+i+')" ontouchend="handleDayEnd('+i+')" ontouchcancel="handleDayLeave()">'
+      +'<span class="day-label">'+d+'</span>'
+      +'<div style="font-size:22px">'+(has?'💪':'·')+'</div>'
+      +(label ? '<div class="day-tag">'+label+'</div>' : '')
+      +(has   ? '<div class="day-count">'+count+' rutina'+(count>1?'s':'')+'</div>' : '')
+      +'</div>';
+  }).join('');
+}
+
+var _touchTimer = null, _touchFired = false;
+
+function handleDayStart(idx) {
+  _touchFired = false;
+  _touchTimer = setTimeout(function(){
+    _touchFired = true;
+    _touchTimer = null;
+    openDayEditor(idx);
+  }, 600);
+}
+function handleDayEnd(idx) {
+  if (_touchTimer) {
+    clearTimeout(_touchTimer);
+    _touchTimer = null;
+    if (!_touchFired) {
+      // Tap corto
+      var plan = weekPlan[idx];
+      if (plan && plan.routineIds && plan.routineIds.length > 0) {
+        openDayPreview(idx);
+      } else {
+        openDayEditor(idx);
+      }
+    }
+  }
+}
+function handleDayLeave() {
+  if (_touchTimer){ clearTimeout(_touchTimer); _touchTimer=null; }
+}
+
+// =============================================================
+// MODAL EDITOR DÍA (tap largo)
+// =============================================================
+function openDayEditor(idx) {
+  selectedDayIdx = idx;
+  var plan = weekPlan[idx] || { label:'', routineIds:[], reps:{} };
+  document.getElementById('de-label').value = plan.label || '';
+  renderDayEditorList(plan);
+  renderDayAddOptions(plan);
+  document.getElementById('modal-day-editor').classList.add('open');
+}
+
+function renderDayEditorList(plan) {
+  var ids = plan.routineIds || [];
+  var c = document.getElementById('de-routine-list');
+  if (!ids.length) {
+    c.innerHTML = '<div style="color:var(--muted);font-size:13px;margin-bottom:8px;">Sin rutinas — añade abajo</div>';
+    return;
+  }
+  c.innerHTML = ids.map(function(rid, i){
+    var r = routines.find(function(x){ return x.id===rid; });
+    if (!r) return '';
+    var isW = (i===0);
+    return '<div class="day-routine-row">'
+      +(isW ? '<span class="warmup-badge">CALENT.</span>' : '')
+      +'<div class="drr-name">'+r.name+'</div>'
+      +'<button onclick="removeDayRoutine(\''+rid+'\')" style="background:none;border:none;color:var(--danger);font-size:20px;cursor:pointer;flex-shrink:0;">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function renderDayAddOptions(plan) {
+  var ids = plan.routineIds || [];
+  var rem = routines.filter(function(r){ return !arrIncludes(ids, r.id); });
+  var c = document.getElementById('de-add-options');
+  if (!rem.length) {
+    c.innerHTML = '<div style="color:var(--muted);font-size:12px;">Todas las rutinas ya están añadidas</div>';
+    return;
+  }
+  c.innerHTML = rem.map(function(r){
+    return '<button onclick="addDayRoutine(\''+r.id+'\')" style="display:block;width:100%;text-align:left;padding:12px;margin-bottom:6px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:white;cursor:pointer;">+ '+r.name+'</button>';
+  }).join('');
+}
+
+function getCurPlan() { return weekPlan[selectedDayIdx] || { label:'', routineIds:[], reps:{} }; }
+
+function addDayRoutine(rid) {
+  var p = getCurPlan();
+  if (!arrIncludes(p.routineIds, rid)) p.routineIds.push(rid);
+  if (!p.reps) p.reps = {};
+  weekPlan[selectedDayIdx] = p;
+  renderDayEditorList(p);
+  renderDayAddOptions(p);
+}
+
+function removeDayRoutine(rid) {
+  var p = getCurPlan();
+  p.routineIds = p.routineIds.filter(function(id){ return id!==rid; });
+  if (p.reps) delete p.reps[rid];
+  weekPlan[selectedDayIdx] = p;
+  renderDayEditorList(p);
+  renderDayAddOptions(p);
+}
+
+function saveDayEditor() {
+  var p = getCurPlan();
+  p.label = document.getElementById('de-label').value.trim();
+  if (!p.routineIds.length) delete weekPlan[selectedDayIdx];
+  else weekPlan[selectedDayIdx] = p;
+  localStorage.setItem('cali_final_v11_w', JSON.stringify(weekPlan));
+  document.getElementById('modal-day-editor').classList.remove('open');
+  renderWeek();
+}
+
+function clearDayAndClose() {
+  delete weekPlan[selectedDayIdx];
+  localStorage.setItem('cali_final_v11_w', JSON.stringify(weekPlan));
+  document.getElementById('modal-day-editor').classList.remove('open');
+  renderWeek();
+}
+
+// =============================================================
+// MODAL PREVIEW DÍA (tap corto) — con control de vueltas
+// =============================================================
+function openDayPreview(idx) {
+  selectedDayIdx = idx;
+  var plan = weekPlan[idx];
+  if (!plan) return;
+  var dayNames = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  document.getElementById('dp-title').innerText = plan.label ? plan.label.toUpperCase() : dayNames[idx].toUpperCase();
+
+  var html = plan.routineIds.map(function(rid, i){
+    var r = routines.find(function(x){ return x.id===rid; });
+    if (!r) return '';
+    var isWarmup = (i===0);
+    if (isWarmup) {
+      return '<div class="day-routine-row">'
+        +'<span class="warmup-badge">CALENT.</span>'
+        +'<div class="drr-name">'+r.name+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);flex-shrink:0;">1 vez</div>'
+        +'</div>';
+    }
+    var reps = (plan.reps && plan.reps[rid]) ? plan.reps[rid] : 1;
+    return '<div class="day-routine-row">'
+      +'<div class="drr-name">'+r.name+'</div>'
+      +'<div class="reps-ctrl">'
+      +'<button onclick="changeDayReps(\''+rid+'\',-1)">−</button>'
+      +'<span class="reps-val" id="drr-'+rid+'">'+reps+'</span>'
+      +'<button onclick="changeDayReps(\''+rid+'\',1)">+</button>'
+      +'</div></div>';
+  }).join('');
+
+  document.getElementById('dp-routines').innerHTML = html || '<div style="color:var(--muted);font-size:13px;">Sin rutinas configuradas</div>';
+  document.getElementById('modal-day-preview').classList.add('open');
+}
+
+function changeDayReps(rid, delta) {
+  var plan = weekPlan[selectedDayIdx];
+  if (!plan.reps) plan.reps = {};
+  plan.reps[rid] = Math.max(1, (plan.reps[rid]||1) + delta);
+  var el = document.getElementById('drr-'+rid);
+  if (el) el.innerText = plan.reps[rid];
+  localStorage.setItem('cali_final_v11_w', JSON.stringify(weekPlan));
+}
+
+function closeDayPreviewOpenEditor() {
+  document.getElementById('modal-day-preview').classList.remove('open');
+  openDayEditor(selectedDayIdx);
+}
+
+function confirmDayStart() {
+  document.getElementById('modal-day-preview').classList.remove('open');
+  var plan = weekPlan[selectedDayIdx];
+  sessionQueue = plan.routineIds.map(function(rid, i){
+    var r = routines.find(function(x){ return x.id===rid; });
+    if (!r) return null;
+    var reps = (i===0) ? 1 : ((plan.reps && plan.reps[rid]) ? plan.reps[rid] : 1);
+    return { routine:r, reps:reps };
+  }).filter(Boolean);
+  sessionDayLabel = plan.label || '';
+  sessionQueueIdx = 0;
+  startNextInQueue(true);
+}
+
+// =============================================================
+// SESIÓN MULTI-RUTINA
+// =============================================================
+function startNextInQueue(isFirst) {
+  if (sessionQueueIdx >= sessionQueue.length) {
+    speak('Sesión completa. ¡Buen trabajo!');
+    saveHistory(sessionDayLabel || sessionQueue.map(function(s){ return s.routine.name; }).join(' + '));
+    setTimeout(goHome, 4000);
+    return;
+  }
+  var item  = sessionQueue[sessionQueueIdx];
+  sessionQueueIdx++;
+  var isLast = (sessionQueueIdx >= sessionQueue.length);
+  var total  = sessionQueue.length;
+  var num    = sessionQueueIdx;
+
+  if (total > 1) document.getElementById('workout-session-info').textContent = 'RUTINA '+num+' / '+total;
+  else           document.getElementById('workout-session-info').textContent = '';
+
+  startWorkout(item.routine, item.reps, {
+    isFirst:      isFirst,
+    isLast:       isLast,
+    dayLabel:     sessionDayLabel,
+    sessionMode:  total > 1,
+    onFinish:     function(){ startNextInQueue(false); }
+  });
+}
+
+// =============================================================
+// MOTOR WORKOUT
+// =============================================================
+function startWorkout(r, reps, opts) {
+  opts = opts || {};
+  currentRoutine = r; totalReps = reps; phases = [];
+
+  for (var i=0; i<reps; i++) {
+    r.exercises.forEach(function(ex, exIdx){
+      phases.push({ type:'prep',     name:ex.name, dur:5,        round:i+1 });
+      phases.push({ type:'exercise', name:ex.name, dur:ex.dur,   round:i+1, phrases:ex.phrases });
+      if (exIdx < r.exercises.length-1 || i < reps-1) {
+        var nextEx = (exIdx < r.exercises.length-1) ? r.exercises[exIdx+1].name : r.exercises[0].name;
+        phases.push({ type:'rest', name:'Descanso', dur:r.rest, next:nextEx, round:i+1 });
+      }
+    });
+    if (i < reps-1) phases.push({ type:'roundend', round:i+1, dur:0 });
+  }
+
+  pIdx=0; isPaused=false;
+  showView('workout');
+
+  var delay = 800;
+
+  // "Hoy toca trabajar X" solo al inicio del día, si tiene nombre
+  if (opts.isFirst && opts.dayLabel) {
+    setTimeout(function(){ speak('Hoy toca trabajar '+opts.dayLabel); }, delay);
+    delay += 2400;
+  }
+
+  // "Ahora: nombre rutina" al pasar de una rutina a la siguiente en sesión multi
+  if (opts.sessionMode && !opts.isFirst) {
+    setTimeout(function(){ speak('Ahora: '+r.name); }, delay);
+    delay += 2000;
+  }
+
+  // Aviso de vueltas (solo si >1 y solo en rutinas secundarias, no calentamiento)
+  if (reps > 1) {
+    setTimeout((function(d){ return function(){ speak('Esta rutina se repite '+d+' veces'); }; })(reps), delay);
+    delay += 2000;
+  }
+
+  // Intro hablada de la rutina
+  if (r.desc) {
+    setTimeout((function(d){ return function(){ speak(d); }; })(r.desc), delay);
+    delay += 2500;
+  }
+
+  // Música: arrancar solo si es la primera rutina de la sesión (o rutina individual)
+  if (r.trackId && (opts.isFirst || !musicAudio)) {
+    setTimeout((function(id){ return function(){ startMusic(id); }; })(r.trackId), delay);
+  }
+
+  window._workoutOnFinish = opts.onFinish || null;
+  setTimeout(runPhase, delay + 500);
+}
+
+var ORDINALS = ['','primera','segunda','tercera','cuarta','quinta','sexta','séptima','octava','novena','décima'];
+
+function runPhase() {
+  if (pIdx >= phases.length) {
+    if (window._workoutOnFinish) {
+      speak('Muy bien, siguiente rutina');
+      var cb = window._workoutOnFinish;
+      window._workoutOnFinish = null;
+      setTimeout(cb, 2500);
+    } else {
+      speak('Final de rutina, ¡buen trabajo!');
+      saveHistory(currentRoutine.name);
+      setTimeout(goHome, 4000);
+    }
+    return;
+  }
+
+  var p = phases[pIdx];
+
+  if (p.type === 'roundend') {
+    var nextRound = p.round + 1;
+    var lbl = ORDINALS[nextRound] || ('número '+nextRound);
+    speak('Empieza la '+lbl+' vuelta');
+    pIdx++;
+    setTimeout(runPhase, 2500);
+    return;
+  }
+
+  timeLeft = p.dur; isPaused = false;
+
+  if (p.type === 'exercise') speak('¡Ya! '+p.name);
+  else if (p.type === 'prep')speak('Prepárate: '+p.name);
+  else if (p.type === 'rest')speak('Descansa');
+
+  updateRoundInfo(p.round);
+  updateUI();
+
+  if (timer) clearInterval(timer);
+  timer = setInterval(function(){
+    if (isPaused) return;
+    timeLeft--;
+    if (timeLeft <= 3 && timeLeft > 0) speak(timeLeft);
+    if (p.type==='rest' && timeLeft===10 && p.next) speak('Siguiente ejercicio: '+p.next);
+    if (p.type==='exercise' && p.phrases) {
+      var elapsed = p.dur - timeLeft;
+      p.phrases.forEach(function(ph){ if(ph.sec===elapsed) speak(ph.text); });
+    }
+    if (timeLeft < 0){ pIdx++; runPhase(); } else updateUI();
+  }, 1000);
+}
+
+function updateRoundInfo(round) {
+  document.getElementById('workout-round-info').textContent =
+    totalReps > 1 ? 'VUELTA '+round+' / '+totalReps : '';
+}
+function updateUI() {
+  var p = phases[pIdx]; if (!p) return;
+  var badge = document.getElementById('phase-badge');
+  badge.className = 'phase-badge '+p.type;
+  badge.innerText = p.type.toUpperCase();
+  document.getElementById('current-ex-name').innerText = p.name;
+  document.getElementById('timer-display').innerText = timeLeft;
+  var n = phases[pIdx+1];
+  document.getElementById('next-hint').innerText = n ? 'Próximo: '+n.name : '¡Final!';
+}
+
+// =============================================================
+// PREVIEW RUTINA INDIVIDUAL (desde pestaña Rutinas)
+// =============================================================
+function openPreview(id) {
+  currentRoutine = routines.find(function(x){ return x.id===id; });
+  if (!currentRoutine) return;
+  previewReps = 1;
+  document.getElementById('pre-name').innerText = currentRoutine.name;
+  document.getElementById('pre-reps').innerText = 1;
+  document.getElementById('modal-preview').classList.add('open');
+}
+function changePreviewReps(v) {
+  previewReps = Math.max(1, previewReps+v);
+  document.getElementById('pre-reps').innerText = previewReps;
+}
+function confirmPreviewStart() {
+  document.getElementById('modal-preview').classList.remove('open');
+  sessionQueue=[];sessionQueueIdx=0;sessionDayLabel='';
+  startWorkout(currentRoutine, previewReps, { isFirst:true, isLast:true });
+}
+
+// =============================================================
+// HISTORIAL
+// =============================================================
+function saveHistory(name) {
+  var entry = { id:Date.now(), name:name, date:new Date().toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) };
+  workoutHistory.unshift(entry);
+  localStorage.setItem('cali_final_v10_h', JSON.stringify(workoutHistory));
+}
+function deleteHistoryItem(id) {
+  workoutHistory = workoutHistory.filter(function(h){ return h.id!==id; });
+  localStorage.setItem('cali_final_v10_h', JSON.stringify(workoutHistory));
+  renderHistory();
+}
+function renderHistory() {
+  document.getElementById('history-list').innerHTML = workoutHistory.map(function(h){
+    return '<div class="item-card"><div style="flex:1"><b>'+h.name+'</b><br><small style="color:var(--muted)">'+h.date+'</small></div>'
+      +'<button onclick="deleteHistoryItem('+h.id+')" style="background:none;border:none;color:var(--danger);font-size:18px;">✕</button></div>';
+  }).join('');
+}
+
+// =============================================================
+// NAVEGACIÓN
+// =============================================================
+function showView(id) {
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  document.getElementById('view-'+id).classList.add('active');
+}
+function stopWorkout() {
+  if (timer) clearInterval(timer); timer=null;
+  pIdx=99999;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  window._workoutOnFinish=null;
+  stopMusic();
+  goHome();
+}
+function goHome() {
+  renderRoutines(); renderWeek(); renderHistory();
+  showView('home');
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    var map={rutinas:'routines',semana:'week',historial:'history'};
+    var key=b.textContent.trim().toLowerCase();
+    var tk=map[key]||(b.textContent.trim()==='🎵'?'music':key);
+    b.classList.toggle('active', tk===t);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(p){
+    p.classList.toggle('active', p.id==='tab-'+t);
+  });
+  if (t==='music') renderTracks();
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.getElementById('btn-pause').innerText = isPaused?'CONTINUAR':'PAUSA';
+  if (isPaused){ if(musicAudio) musicAudio.pause(); }
+  else         { if(musicAudio) musicAudio.play().catch(function(){}); }
+}
+
+// =============================================================
+// EDITOR RUTINA
+// =============================================================
+function openEditor(id) {
+  id = id || null;
+  editingId = id;
+  document.getElementById('edit-exercises-list').innerHTML='';
+  if (id) {
+    var r = routines.find(function(x){ return x.id===id; });
+    document.getElementById('edit-name').value  = r.name;
+    document.getElementById('edit-desc').value  = r.desc||'';
+    document.getElementById('edit-rest').value  = r.rest;
+    document.getElementById('edit-track').value = r.trackId||'';
+    r.exercises.forEach(function(ex){ addExerciseField(ex); });
+  } else {
+    document.getElementById('edit-name').value  = '';
+    document.getElementById('edit-desc').value  = '';
+    document.getElementById('edit-track').value = '';
+    addExerciseField();
+  }
+  showView('editor');
+  // Poblar selector de pistas después (no bloquea la UI)
+  populateTrackSelect();
+}
+
+function renderRoutines() {
+  document.getElementById('routines-list').innerHTML = routines.map(function(r){
+    return '<div class="item-card" onclick="openPreview(\''+r.id+'\')">'+
+      '<div style="font-size:24px;">💪</div>'+
+      '<div style="flex:1"><b>'+r.name+'</b>'+(r.trackId?' <span style="font-size:11px;color:var(--accent)">🎵</span>':'')+
+      '<br><small style="color:var(--muted)">'+r.exercises.length+' ejers.</small></div>'+
+      '<div style="display:flex;gap:8px;">'+
+      '<button onclick="event.stopPropagation();openEditor(\''+r.id+'\')" style="background:var(--surface2);color:white;border:none;padding:10px;border-radius:8px;">✏️</button>'+
+      '<button onclick="event.stopPropagation();deleteRoutine(\''+r.id+'\')" style="background:var(--surface2);color:var(--danger);border:none;padding:10px;border-radius:8px;">✕</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function deleteRoutine(id) {
+  if (!confirm('¿Borrar rutina?')) return;
+  routines = routines.filter(function(r){ return r.id!==id; });
+  localStorage.setItem('cali_final_v10_r', JSON.stringify(routines));
+  // Limpiar del plan semanal también
+  Object.keys(weekPlan).forEach(function(k){
+    var p=weekPlan[k];
+    if(p && p.routineIds) p.routineIds=p.routineIds.filter(function(rid){return rid!==id;});
+  });
+  localStorage.setItem('cali_final_v11_w', JSON.stringify(weekPlan));
+  renderRoutines();
+}
+
+function addExerciseField(ex) {
+  ex = ex || { name:'', dur:30, tech:'', phrases:[] };
+  var div = document.createElement('div');
+  div.className = 'exercise-item';
+  div.innerHTML =
+    '<div style="display:flex;gap:10px;margin-bottom:10px;">'
+    +'<input type="text" placeholder="Ejercicio" value="'+ex.name+'" class="ex-name">'
+    +'<input type="number" value="'+ex.dur+'" style="width:70px" class="ex-dur">'
+    +'<button onclick="this.parentElement.parentElement.remove()" style="color:var(--danger);background:none;border:none;font-size:22px;">×</button>'
+    +'</div>'
+    +'<textarea placeholder="Descripción técnica" class="ex-tech" style="height:50px;font-size:12px;background:var(--surface2);margin-bottom:10px;">'+(ex.tech||'')+'</textarea>'
+    +'<div class="ph-list"></div>'
+    +'<button onclick="addPhraseRow(this.previousElementSibling)" style="font-size:11px;color:var(--accent);background:none;border:none;">+ FRASE VOZ</button>';
+  if (ex.phrases) ex.phrases.forEach(function(p){ addPhraseRow(div.querySelector('.ph-list'),p); });
+  document.getElementById('edit-exercises-list').appendChild(div);
+}
+
+function addPhraseRow(container, p) {
+  p = p || { text:'', sec:5 };
+  var row = document.createElement('div');
+  row.className = 'phrase-row';
+  row.innerHTML =
+    '<input type="text" placeholder="Frase..." value="'+p.text+'" class="ph-text" style="flex:1;border:none;">'
+    +'<input type="number" value="'+p.sec+'" class="ph-sec" style="width:40px;background:none;border:none;color:var(--accent);text-align:center;">'
+    +'<button onclick="this.parentElement.remove()" style="color:var(--muted);border:none;background:none;">×</button>';
+  container.appendChild(row);
+}
+
+function saveRoutine() {
+  var name = document.getElementById('edit-name').value;
+  if (!name) return alert('Nombre obligatorio');
+  var exercises = Array.from(document.querySelectorAll('.exercise-item')).map(function(it){
+    return {
+      name: it.querySelector('.ex-name').value,
+      dur:  parseInt(it.querySelector('.ex-dur').value)||30,
+      tech: it.querySelector('.ex-tech').value,
+      phrases: Array.from(it.querySelectorAll('.phrase-row')).map(function(row){
+        return { text:row.querySelector('.ph-text').value, sec:parseInt(row.querySelector('.ph-sec').value)||0 };
+      }).filter(function(ph){ return ph.text; })
+    };
+  }).filter(function(e){ return e.name; });
+
+  var trackId = document.getElementById('edit-track').value || null;
+  var r = {
+    id:       editingId || Date.now().toString(),
+    name:     name,
+    desc:     document.getElementById('edit-desc').value,
+    rest:     parseInt(document.getElementById('edit-rest').value)||30,
+    trackId:  trackId,
+    exercises: exercises
+  };
+  if (editingId) routines = routines.map(function(x){ return x.id===editingId?r:x; });
+  else routines.push(r);
+  localStorage.setItem('cali_final_v10_r', JSON.stringify(routines));
+  goHome();
+}
+
+// =============================================================
+// INIT
+// =============================================================
+openDB().then(function(){
+  renderRoutines();
+  renderWeek();
+  renderHistory();
+  renderTracks();
+});
+
+// Desregistrar SW para evitar cache obsoleta
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+  });
+}
+</script>
+</body>
+</html>

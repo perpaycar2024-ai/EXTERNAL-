@@ -1,0 +1,26 @@
+{
+  "name": "Calistenia Pro",
+  "short_name": "Calistenia",
+  "description": "Entrenamiento de calistenia con temporizador y voz",
+  "start_url": "/calistenia/index.html",
+  "scope": "/calistenia/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0e0e",
+  "theme_color": "#0e0e0e",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/calistenia/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/calistenia/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
