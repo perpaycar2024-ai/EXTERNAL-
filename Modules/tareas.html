@@ -168,6 +168,31 @@
   .history-empty { text-align: center; color: var(--text3); padding: 40px 20px; font-size: 0.92rem; }
   .history-date-group { margin-bottom: 20px; }
   .history-date-label { font-size: 0.77rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; padding-left: 4px; }
+  .history-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .btn-pdf { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+  .btn-pdf:hover { border-color: var(--accent); color: var(--accent); }
+  .history-month { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+  .history-month > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px 16px; -webkit-tap-highlight-color: transparent; }
+  .history-month > summary::-webkit-details-marker { display: none; }
+  .history-month[open] > summary { border-bottom: 1px solid var(--border); background: var(--bg3); }
+  .hm-title { flex: 1; font-family: 'DM Serif Display', serif; font-size: 1.15rem; color: var(--text); }
+  .hm-count { font-size: 0.75rem; font-weight: 600; color: var(--accent2); background: rgba(74,158,255,0.12); padding: 2px 9px; border-radius: 10px; }
+  .hm-chev { color: var(--text3); transition: transform 0.2s; }
+  .history-month[open] > summary .hm-chev { transform: rotate(180deg); }
+  .history-month-body { padding: 14px 12px 0; }
+
+  /* PDF MODAL */
+  .pdf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .pdf-chip { background: var(--card2); border: 1px solid var(--border); border-radius: 20px; padding: 7px 13px; font-size: 0.82rem; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, color 0.15s; }
+  .pdf-chip:hover { border-color: var(--accent); color: var(--accent2); }
+  .pdf-months { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; }
+  .pdf-month-row { display: flex; align-items: center; gap: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; cursor: pointer; font-size: 0.92rem; color: var(--text); }
+  .pdf-month-row.sel { border-color: var(--accent); background: rgba(74,158,255,0.1); }
+  .pdf-month-row input { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+  .pdf-month-row .pm-name { flex: 1; }
+  .pdf-month-row .pm-count { font-size: 0.78rem; color: var(--text3); }
+  .pdf-summary { margin-top: 14px; font-size: 0.85rem; color: var(--text2); min-height: 1.3em; }
+  .btn-primary:disabled { opacity: 0.45; cursor: default; }
 
   /* MODALES */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
@@ -273,6 +298,9 @@
       </div>
     </div>
     <div id="tab-content-history" style="padding:0 16px;display:none">
+      <div class="history-toolbar" id="history-toolbar" style="display:none">
+        <button class="btn-pdf" onclick="openPdfModal()">📄 Descargar PDF</button>
+      </div>
       <div id="history-list"></div>
       <div class="history-empty" id="history-empty" style="display:none">Aún no hay tareas completadas.</div>
     </div>
@@ -357,6 +385,20 @@
 
     <div class="modal-actions" style="margin-top:10px">
       <button class="btn-secondary" onclick="closeBackupModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PDF -->
+<div class="modal-overlay" id="modal-pdf">
+  <div class="modal">
+    <div class="modal-title">📄 Descargar historial en PDF</div>
+    <div class="pdf-chips" id="pdf-chips"></div>
+    <div class="pdf-months" id="pdf-months"></div>
+    <div class="pdf-summary" id="pdf-summary"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closePdfModal()">Cancelar</button>
+      <button class="btn-primary" id="pdf-generate-btn" onclick="generatePdf()">Generar PDF</button>
     </div>
   </div>
 </div>
@@ -597,19 +639,40 @@ function renderTaskList(tasks){
   const f=folders.find(x=>x.id===currentFolderId);
   list.innerHTML=tasks.map(t=>taskCardHTML(t,f,false)).join('');
 }
+const MONTHS_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DAYS_ES=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const monthKeyOf=ts=>{if(!ts)return 'nodate';const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+const monthLabelOf=k=>{if(k==='nodate')return 'Sin fecha';const [y,m]=k.split('-');return cap(MONTHS_ES[parseInt(m)-1])+' '+y;};
+
 function renderHistory(tasks){
-  const list=document.getElementById('history-list'),empty=document.getElementById('history-empty');
-  if(!tasks.length){list.innerHTML='';empty.style.display='block';return;}
-  empty.style.display='none';
+  const list=document.getElementById('history-list'),empty=document.getElementById('history-empty'),bar=document.getElementById('history-toolbar');
+  if(!tasks.length){list.innerHTML='';empty.style.display='block';bar.style.display='none';return;}
+  empty.style.display='none';bar.style.display='';
   tasks.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
-  const groups={};
-  tasks.forEach(t=>{const d=t.doneAt?new Date(t.doneAt).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'Sin fecha';if(!groups[d])groups[d]=[];groups[d].push(t);});
+  // mes → día → tareas (orden de inserción = más reciente primero)
+  const months={};
+  tasks.forEach(t=>{
+    const mk=monthKeyOf(t.doneAt);
+    const d=t.doneAt?new Date(t.doneAt).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'Sin fecha';
+    if(!months[mk])months[mk]={};
+    if(!months[mk][d])months[mk][d]=[];
+    months[mk][d].push(t);
+  });
   const f=folders.find(x=>x.id===currentFolderId);
-  list.innerHTML=Object.entries(groups).map(([date,ts])=>`
-    <div class="history-date-group">
-      <div class="history-date-label">${date}</div>
-      <div class="tasks-list">${ts.map(t=>taskCardHTML(t,f,true)).join('')}</div>
-    </div>`).join('');
+  const curKey=monthKeyOf(Date.now()); // por defecto solo el mes actual abierto
+  list.innerHTML=Object.entries(months).map(([mk,days])=>{
+    const n=Object.values(days).reduce((a,ts)=>a+ts.length,0);
+    return `<details class="history-month"${mk===curKey?' open':''}>
+      <summary><span class="hm-title">${monthLabelOf(mk)}</span><span class="hm-count">${n}</span><span class="hm-chev">▾</span></summary>
+      <div class="history-month-body">${Object.entries(days).map(([date,ts])=>`
+        <div class="history-date-group">
+          <div class="history-date-label">${date}</div>
+          <div class="tasks-list">${ts.map(t=>taskCardHTML(t,f,true)).join('')}</div>
+        </div>`).join('')}
+      </div>
+    </details>`;
+  }).join('');
 }
 
 // ── RENDER TARJETA ─────────────────────────────────────
@@ -936,6 +999,305 @@ async function restoreTask(id){
 async function deleteTask(id){
   if(!confirm('¿Eliminar esta tarea?'))return;
   await dbDel('tasks',id);renderFolderDetail();
+}
+
+// ── PDF DEL HISTORIAL ──────────────────────────────────
+let pdfMonths=[], pdfSel=new Set(), pdfTasks=[];
+
+function loadJsPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF)return Promise.resolve();
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='./jspdf.umd.min.js';
+    s.onload=()=>res();
+    s.onerror=()=>rej(new Error('no-load'));
+    document.head.appendChild(s);
+  });
+}
+
+async function openPdfModal(){
+  const all=await dbIdx('tasks','folderId',currentFolderId);
+  pdfTasks=all.filter(t=>t.done);
+  const map={};
+  pdfTasks.forEach(t=>{const k=monthKeyOf(t.doneAt);map[k]=(map[k]||0)+1;});
+  const keys=Object.keys(map).filter(k=>k!=='nodate').sort().reverse();
+  if(map.nodate)keys.push('nodate');
+  pdfMonths=keys.map(k=>({key:k,label:monthLabelOf(k),count:map[k]}));
+  const cur=monthKeyOf(Date.now());
+  pdfSel=new Set(map[cur]?[cur]:(keys.length?[keys[0]]:[]));
+  renderPdfModal();
+  document.getElementById('modal-pdf').classList.add('open');
+}
+function closePdfModal(){document.getElementById('modal-pdf').classList.remove('open');}
+
+function renderPdfModal(){
+  const years=[...new Set(pdfMonths.filter(m=>m.key!=='nodate').map(m=>m.key.slice(0,4)))];
+  document.getElementById('pdf-chips').innerHTML=
+    `<button class="pdf-chip" onclick="pdfPick('cur')">Mes actual</button>`+
+    years.map(y=>`<button class="pdf-chip" onclick="pdfPick('y:${y}')">Año ${y}</button>`).join('')+
+    `<button class="pdf-chip" onclick="pdfPick('all')">Todo</button>`+
+    `<button class="pdf-chip" onclick="pdfPick('none')">Ninguno</button>`;
+  document.getElementById('pdf-months').innerHTML=pdfMonths.map(m=>`
+    <label class="pdf-month-row${pdfSel.has(m.key)?' sel':''}">
+      <input type="checkbox" ${pdfSel.has(m.key)?'checked':''} onchange="pdfToggle('${m.key}',this)">
+      <span class="pm-name">${m.label}</span>
+      <span class="pm-count">${m.count} registro${m.count!==1?'s':''}</span>
+    </label>`).join('');
+  updatePdfSummary();
+}
+function pdfPick(what){
+  if(what==='cur')pdfSel=new Set(pdfMonths.filter(m=>m.key===monthKeyOf(Date.now())).map(m=>m.key));
+  else if(what==='all')pdfSel=new Set(pdfMonths.map(m=>m.key));
+  else if(what==='none')pdfSel=new Set();
+  else if(what.startsWith('y:'))pdfSel=new Set(pdfMonths.filter(m=>m.key.startsWith(what.slice(2)+'-')).map(m=>m.key));
+  renderPdfModal();
+}
+function pdfToggle(k,el){
+  if(el.checked)pdfSel.add(k);else pdfSel.delete(k);
+  el.closest('label').classList.toggle('sel',el.checked);
+  updatePdfSummary();
+}
+function updatePdfSummary(){
+  const sel=pdfMonths.filter(m=>pdfSel.has(m.key));
+  const total=sel.reduce((a,m)=>a+m.count,0);
+  document.getElementById('pdf-summary').textContent=sel.length?`${sel.length} mes${sel.length!==1?'es':''} · ${total} registro${total!==1?'s':''} en un solo PDF`:'Elige al menos un mes.';
+  document.getElementById('pdf-generate-btn').disabled=!sel.length;
+}
+
+async function generatePdf(){
+  const keys=[...pdfSel].sort(); // 'nodate' queda al final
+  if(!keys.length)return;
+  const btn=document.getElementById('pdf-generate-btn');
+  btn.disabled=true;btn.textContent='Generando…';
+  try{
+    await loadJsPDF();
+    buildPdf(folders.find(x=>x.id===currentFolderId)||{},keys);
+    closePdfModal();
+  }catch(e){
+    console.error(e);
+    alert('No se pudo generar el PDF.\n'+(e&&e.message==='no-load'?'No se encuentra jspdf.umd.min.js (¿está subido junto al index.html y en la caché del sw?).':(e&&e.message)||e));
+  }finally{
+    btn.textContent='Generar PDF';updatePdfSummary();
+  }
+}
+
+// jsPDF usa Helvetica (Latin-1): se limpian emojis y símbolos fuera de rango
+const pdfSafe=s=>String(s==null?'':s).replace(/\r/g,'').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/[^\n\x20-\x7E -ÿ–—•€]/g,'');
+const p2=n=>String(n).padStart(2,'0');
+const fmtDate=ts=>{const d=new Date(ts);return `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()}`;};
+const fmtTime=ts=>{const d=new Date(ts);return `${p2(d.getHours())}:${p2(d.getMinutes())}`;};
+const fmtDayLong=ts=>{const d=new Date(ts);return `${DAYS_ES[d.getDay()]}, ${d.getDate()} de ${MONTHS_ES[d.getMonth()]} de ${d.getFullYear()}`;};
+const isoES=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s))?String(s).split('-').reverse().join('/'):String(s);
+const dayKeyOf=ts=>{if(!ts)return 'nodate';const d=new Date(ts);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());};
+
+function buildPdf(folder,keys){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const PW=210,PH=297,M=18,TOP=26,BOT=PH-22,LH=4.7;
+  const NAVY=[15,27,45],BLUE=[74,158,255],INK=[25,35,50],GREY=[100,112,130],LINE=[210,218,230];
+  const folderName=pdfSafe(folder.name).trim()||'Diario';
+  const now=new Date();
+  const genText=`${fmtDayLong(now)}, ${fmtTime(now)}`;
+
+  // helpers de texto (y = borde superior de la línea)
+  const T=(str,x,yTop,o={})=>{
+    const size=o.size||10;
+    doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(size);
+    doc.setTextColor(...(o.color||INK));
+    doc.text(String(str),x,yTop+size*0.3528*0.8,o.align?{align:o.align}:undefined);
+  };
+  const tw=(str,size,bold)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);return doc.getTextWidth(String(str));};
+  const wrap=(str,width,size,bold)=>{
+    doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);
+    const out=[];
+    String(str).split('\n').forEach(par=>{if(!par.trim()){out.push('');return;}doc.splitTextToSize(par,width).forEach(l=>out.push(l));});
+    return out;
+  };
+
+  // datos
+  const byMonth={};
+  pdfTasks.forEach(t=>{const k=monthKeyOf(t.doneAt);if(keys.includes(k))(byMonth[k]=byMonth[k]||[]).push(t);});
+  const total=keys.reduce((a,k)=>a+(byMonth[k]||[]).length,0);
+
+  // texto de periodo
+  const real=keys.filter(k=>k!=='nodate');
+  const avail=pdfMonths.map(m=>m.key).filter(k=>k!=='nodate').sort();
+  let period,contiguous=false;
+  if(keys.length===1)period=monthLabelOf(keys[0]);
+  else if(keys.length===pdfMonths.length)period='Historial completo';
+  else if(real.length){
+    const first=real[0],last=real[real.length-1];
+    contiguous=!keys.includes('nodate')&&avail.filter(k=>k>=first&&k<=last).every(k=>keys.includes(k));
+    const [y1,m1]=first.split('-'),[y2,m2]=last.split('-');
+    const yearAll=y1===y2&&avail.filter(k=>k.startsWith(y1+'-')).every(k=>keys.includes(k));
+    if(contiguous)period=yearAll?`Año ${y1}`:(y1===y2?`${cap(MONTHS_ES[m1-1])} – ${cap(MONTHS_ES[m2-1])} ${y1}`:`${monthLabelOf(first)} – ${monthLabelOf(last)}`);
+    else period=`Selección de ${keys.length} meses`;
+  } else period='Sin fecha';
+
+  // paginación
+  let y=TOP,curLabel='',curTitle='',seg=null;
+  const pageLabel={},monthPage={};
+  const pageNo=()=>doc.getNumberOfPages();
+  const closeSeg=yEnd=>{
+    if(!seg)return;
+    const last=pageNo();
+    doc.setPage(seg.page);doc.setDrawColor(...BLUE);doc.setLineWidth(0.7);doc.line(M+1,seg.y0,M+1,yEnd);
+    doc.setPage(last);seg=null;
+  };
+  const ensure=h=>{
+    if(y+h<=BOT)return;
+    const had=!!seg;
+    if(had)closeSeg(y-1);
+    doc.addPage();pageLabel[pageNo()]=curLabel;y=TOP;
+    if(had){
+      seg={page:pageNo(),y0:y};
+      T(`(continuación) ${curTitle}`,M+5,y,{size:8,color:GREY});y+=5;
+    }
+  };
+
+  // ── PORTADA ──
+  doc.setFillColor(...NAVY);doc.rect(0,0,PW,110,'F');
+  doc.setFillColor(...BLUE);doc.rect(M,32,22,1.4,'F');
+  T('INFORME DE REGISTROS',M,22,{size:10,bold:true,color:[138,172,204]});
+  const tl=wrap(folderName,PW-2*M,30,true).slice(0,3);
+  tl.forEach((l,i)=>T(l,M,42+i*13,{size:30,bold:true,color:[255,255,255]}));
+  T('Historial de tareas completadas',M,42+tl.length*13+3,{size:13,color:[200,216,240]});
+
+  T('PERÍODO',M,124,{size:8,bold:true,color:GREY});
+  wrap(period,PW-2*M,20,true).slice(0,2).forEach((l,i)=>T(l,M,130+i*9,{size:20,bold:true,color:INK}));
+  const sy=152;
+  T('REGISTROS',M,sy,{size:8,bold:true,color:GREY});T(String(total),M,sy+5,{size:15,bold:true});
+  T('MESES',M+40,sy,{size:8,bold:true,color:GREY});T(String(keys.length),M+40,sy+5,{size:15,bold:true});
+  T('GENERADO',M+80,sy,{size:8,bold:true,color:GREY});T(genText,M+80,sy+6,{size:9.5});
+
+  // ── MESES ──
+  keys.forEach(k=>{
+    const tasks=(byMonth[k]||[]).slice().sort((a,b)=>(a.doneAt||0)-(b.doneAt||0)||(a.createdAt||0)-(b.createdAt||0));
+    curLabel=monthLabelOf(k);
+    doc.addPage();pageLabel[pageNo()]=curLabel;monthPage[k]=pageNo();y=TOP;
+    const dayCount={};tasks.forEach(t=>{const d=dayKeyOf(t.doneAt);dayCount[d]=(dayCount[d]||0)+1;});
+    // banner de mes
+    doc.setFillColor(...NAVY);doc.rect(M,y,PW-2*M,18,'F');
+    doc.setFillColor(...BLUE);doc.rect(M,y+18,PW-2*M,1.2,'F');
+    T(curLabel.toUpperCase(),M+6,y+4.2,{size:18,bold:true,color:[255,255,255]});
+    const nd=Object.keys(dayCount).length;
+    T(`${tasks.length} registro${tasks.length!==1?'s':''} · ${nd} día${nd!==1?'s':''}`,PW-M-6,y+7,{size:9,color:[200,216,240],align:'right'});
+    y+=18+1.2+9;
+
+    let lastDay=null;
+    tasks.forEach(t=>{
+      const dk=dayKeyOf(t.doneAt);
+      if(dk!==lastDay){
+        lastDay=dk;
+        ensure(10+20);
+        T(t.doneAt?cap(fmtDayLong(t.doneAt)):'Sin fecha de completado',M,y,{size:11.5,bold:true,color:NAVY});
+        T(`${dayCount[dk]} registro${dayCount[dk]!==1?'s':''}`,PW-M,y+1,{size:8.5,color:GREY,align:'right'});
+        doc.setDrawColor(...LINE);doc.setLineWidth(0.3);doc.line(M,y+6.4,PW-M,y+6.4);
+        y+=10;
+      }
+      drawEntry(t);
+    });
+  });
+
+  function drawEntry(t){
+    const X=M+5,LW=34,VX=X+LW+2,VW=PW-M-VX;
+    const titleLines=wrap(pdfSafe(t.title)||'(sin título)',PW-M-X,11.5,true);
+    ensure(titleLines.length*5.4+9);
+    curTitle=titleLines[0]+(titleLines.length>1?'…':'');
+    seg={page:pageNo(),y0:y};
+    titleLines.forEach(l=>{ensure(5.4);T(l,X,y,{size:11.5,bold:true});y+=5.4;});
+    y+=1.2;
+
+    const rows=[];
+    if(t.date)rows.push(['Fecha prevista',[{t:isoES(t.date)}]]);
+    if(t.createdAt)rows.push(['Creada',[{t:`${fmtDate(t.createdAt)}  ${fmtTime(t.createdAt)}`}]]);
+    if(t.doneAt)rows.push(['Completada',[{t:`${fmtDate(t.doneAt)}  ${fmtTime(t.doneAt)}`}]]);
+    if(t.notes)rows.push(['Notas',[{t:pdfSafe(t.notes)}]]);
+    const custom=t.custom||{};
+    const defs=(folder.customFields||[]).filter(c=>c.name);
+    const known=new Set(defs.map(c=>c.name));
+    const fields=defs.map(c=>({name:c.name,type:c.type})).concat(Object.keys(custom).filter(n=>!known.has(n)).map(n=>({name:n,type:Array.isArray(custom[n])?'shoplist':'text'})));
+    fields.forEach(c=>{
+      const v=custom[c.name];
+      if(c.type==='shoplist'||Array.isArray(v)){
+        if(!Array.isArray(v)||!v.length)return;
+        const lines=[];
+        v.forEach(st=>{
+          const items=st.items||[],chk=(st.itemsChecked||[]).filter(Boolean).length;
+          lines.push({t:`${pdfSafe(st.store)||'Sin nombre'}  (${chk}/${items.length})`,bold:true,gap:true});
+          items.forEach((it,i)=>lines.push({t:pdfSafe(it.name),qty:it.qty?pdfSafe(it.qty):'',box:(st.itemsChecked||[])[i]?'x':'o'}));
+        });
+        rows.push([pdfSafe(c.name),lines]);
+      } else if(v!==undefined&&v!==null&&String(v).trim()!==''){
+        rows.push([pdfSafe(c.name),[{t:pdfSafe(c.type==='date'?isoES(v):v)}]]);
+      }
+    });
+
+    rows.forEach(([label,vlines])=>{
+      const lab=wrap(label,LW,8.5,true);
+      const out=[];
+      vlines.forEach(o=>{
+        const indent=o.box?5:0,qw=o.qty?tw(o.qty,9,true)+3:0;
+        wrap(o.t,VW-indent-qw,9.5,o.bold).forEach((p,i)=>out.push({t:p,bold:o.bold,indent,box:i===0?o.box:null,qty:i===0?o.qty:'',gap:o.gap&&i===0}));
+      });
+      const n=Math.max(lab.length,out.length);
+      for(let i=0;i<n;i++){
+        const o=out[i];
+        if(o&&o.gap&&i>0)y+=1.5;
+        ensure(LH);
+        if(lab[i]!==undefined)T(lab[i],X,y,{size:8.5,bold:true,color:GREY});
+        if(o){
+          if(o.box){
+            doc.setDrawColor(...GREY);doc.setLineWidth(0.25);doc.rect(VX,y+0.5,3.2,3.2,'S');
+            if(o.box==='x'){doc.setDrawColor(46,160,100);doc.setLineWidth(0.5);doc.line(VX+0.7,y+2.2,VX+1.5,y+3.1);doc.line(VX+1.5,y+3.1,VX+2.7,y+1.0);}
+          }
+          T(o.t,VX+o.indent,y,{size:9.5,bold:o.bold});
+          if(o.qty)T(o.qty,PW-M,y,{size:9,bold:true,color:[40,100,180],align:'right'});
+        }
+        y+=LH;
+      }
+      y+=1;doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(X,y,PW-M,y);y+=1.2;
+    });
+    closeSeg(y-1.2);
+    y+=4;
+  }
+
+  // ── ÍNDICE EN PORTADA (con nº de página) ──
+  if(keys.length>1&&keys.length<=24){
+    doc.setPage(1);
+    T('CONTENIDO',M,178,{size:8,bold:true,color:GREY});
+    doc.setDrawColor(...LINE);doc.setLineWidth(0.3);doc.line(M,183,PW-M,183);
+    const perCol=12,cols=keys.length>perCol?2:1,colW=cols===2?(PW-2*M-8)/2:PW-2*M;
+    keys.forEach((k,i)=>{
+      const c=Math.floor(i/perCol),r=i%perCol,x=M+c*(colW+8),yy=187+r*7;
+      const cnt=(byMonth[k]||[]).length;
+      T(monthLabelOf(k),x,yy,{size:10,bold:true});
+      T(`${cnt} reg.`,x+colW-22,yy+0.4,{size:8.5,color:GREY,align:'right'});
+      T(`pág. ${monthPage[k]}`,x+colW,yy+0.4,{size:8.5,bold:true,color:NAVY,align:'right'});
+      doc.setDrawColor(...LINE);doc.setLineWidth(0.15);doc.line(x,yy+5.4,x+colW,yy+5.4);
+    });
+  }
+
+  // ── CABECERA Y PIE ──
+  const N=pageNo();
+  for(let p=2;p<=N;p++){
+    doc.setPage(p);
+    T(`${folderName}  ·  ${period}`,M,9,{size:8,color:GREY});
+    T(pageLabel[p]||'',PW-M,9,{size:8,bold:true,color:NAVY,align:'right'});
+    doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,15,PW-M,15);
+    doc.line(M,PH-14,PW-M,PH-14);
+    T(`Generado el ${genText}`,M,PH-11.5,{size:7.5,color:GREY});
+    T(`Página ${p} de ${N}`,PW-M,PH-11.5,{size:7.5,color:GREY,align:'right'});
+  }
+
+  // ── GUARDAR ──
+  const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'diario';
+  let part;
+  if(keys.length===1)part=keys[0]==='nodate'?'sin-fecha':keys[0];
+  else if(contiguous)part=`${real[0]}_a_${real[real.length-1]}`;
+  else part='seleccion';
+  doc.setProperties({title:`${folderName} - ${period}`,subject:'Historial de tareas completadas',creator:'Tareas'});
+  doc.save(`${slug(folderName)}_${part}.pdf`);
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el=>{
