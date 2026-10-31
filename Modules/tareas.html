@@ -168,7 +168,12 @@
   .history-empty { text-align: center; color: var(--text3); padding: 40px 20px; font-size: 0.92rem; }
   .history-date-group { margin-bottom: 20px; }
   .history-date-label { font-size: 0.77rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; padding-left: 4px; }
-  .history-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .history-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+  .history-search { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .history-search .form-input { flex: 1; font-size: 1rem; }
+  .history-search-summary { font-size: 0.84rem; color: var(--text2); line-height: 1.6; margin: 0 2px 12px; }
+  .history-search-summary b { color: var(--accent2); }
+  mark.hit { background: rgba(243,156,18,0.38); color: inherit; border-radius: 3px; padding: 0 1px; }
   .btn-pdf { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
   .btn-pdf:hover { border-color: var(--accent); color: var(--accent); }
   .history-month { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
@@ -299,8 +304,14 @@
     </div>
     <div id="tab-content-history" style="padding:0 16px;display:none">
       <div class="history-toolbar" id="history-toolbar" style="display:none">
+        <button class="btn-pdf" onclick="toggleHistorySearch()" aria-label="Buscar">🔍</button>
         <button class="btn-pdf" onclick="openPdfModal()">📄 Descargar PDF</button>
       </div>
+      <div class="history-search" id="history-search" style="display:none">
+        <input class="form-input" type="search" id="history-search-input" placeholder="Buscar: tarea, sitio, 15 octubre…" autocomplete="off" oninput="onHistorySearch()">
+        <button class="btn-icon" onclick="closeHistorySearch()" aria-label="Cerrar búsqueda">✕</button>
+      </div>
+      <div class="history-search-summary" id="history-search-summary" style="display:none"></div>
       <div id="history-list"></div>
       <div class="history-empty" id="history-empty" style="display:none">Aún no hay tareas completadas.</div>
     </div>
@@ -604,6 +615,7 @@ async function deleteCurrentFolder(){await deleteFolderById(currentFolderId);goB
 // ── VISTA CARPETA ──────────────────────────────────────
 async function openFolder(id){
   currentFolderId=id;currentTab='pending';
+  closeHistorySearch(false);
   document.getElementById('folders-view').classList.add('hidden');
   document.getElementById('folder-detail').classList.remove('hidden');
   renderFolderDetail();
@@ -645,11 +657,86 @@ const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const monthKeyOf=ts=>{if(!ts)return 'nodate';const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
 const monthLabelOf=k=>{if(k==='nodate')return 'Sin fecha';const [y,m]=k.split('-');return cap(MONTHS_ES[parseInt(m)-1])+' '+y;};
 
+// ── BÚSQUEDA EN HISTORIAL ──
+let historyQuery='';
+const normTxt=s=>String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function normMap(s){ // texto normalizado + índice de cada carácter en el original
+  let n='';const map=[];
+  for(let i=0;i<s.length;i++){
+    const c=s[i].normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+    for(let j=0;j<c.length;j++){n+=c[j];map.push(i);}
+  }
+  return {n,map};
+}
+function searchTerms(q){return normTxt(q).split(/\s+/).filter(Boolean);}
+function taskHaystack(t){
+  const parts=[t.title,t.notes];
+  const c=t.custom||{};
+  Object.keys(c).forEach(k=>{
+    const v=c[k];
+    if(Array.isArray(v))v.forEach(st=>{parts.push(st.store);(st.items||[]).forEach(i=>{parts.push(i.name);parts.push(i.qty);});});
+    else parts.push(v);
+  });
+  [t.doneAt,t.date&&new Date(t.date+'T00:00:00').getTime()].forEach(ts=>{ // fechas en varios formatos
+    if(!ts)return;
+    const d=new Date(ts);
+    parts.push(`${d.getDate()} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()} ${DAYS_ES[d.getDay()]} ${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()} ${p2(d.getDate())}/${p2(d.getMonth()+1)} ${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`);
+  });
+  return normTxt(parts.filter(x=>x!=null&&x!=='').join(' \n '));
+}
+function highlightTerms(root,terms){
+  const nodes=[];
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('.task-card')&&!n.parentElement.closest('.task-actions,.task-check,.shop-item-check')&&n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+  while(w.nextNode())nodes.push(w.currentNode);
+  nodes.forEach(node=>{
+    const txt=node.nodeValue,{n,map}=normMap(txt);
+    const ranges=[];
+    terms.forEach(term=>{let i=n.indexOf(term);while(i>-1){ranges.push([map[i],map[i+term.length-1]+1]);i=n.indexOf(term,i+term.length);}});
+    if(!ranges.length)return;
+    ranges.sort((a,b)=>a[0]-b[0]);
+    const merged=[ranges[0].slice()];
+    ranges.slice(1).forEach(r=>{const l=merged[merged.length-1];if(r[0]<=l[1])l[1]=Math.max(l[1],r[1]);else merged.push(r.slice());});
+    const frag=document.createDocumentFragment();let pos=0;
+    merged.forEach(([a,b])=>{
+      if(a>pos)frag.appendChild(document.createTextNode(txt.slice(pos,a)));
+      const m=document.createElement('mark');m.className='hit';m.textContent=txt.slice(a,b);frag.appendChild(m);pos=b;
+    });
+    if(pos<txt.length)frag.appendChild(document.createTextNode(txt.slice(pos)));
+    node.parentNode.replaceChild(frag,node);
+  });
+}
+function toggleHistorySearch(){
+  const box=document.getElementById('history-search');
+  if(box.style.display==='none'){box.style.display='';document.getElementById('history-search-input').focus();}
+  else closeHistorySearch();
+}
+function closeHistorySearch(rerender=true){
+  historyQuery='';
+  const i=document.getElementById('history-search-input');if(i)i.value='';
+  document.getElementById('history-search').style.display='none';
+  document.getElementById('history-search-summary').style.display='none';
+  if(rerender&&currentFolderId)renderFolderDetail();
+}
+function onHistorySearch(){
+  historyQuery=document.getElementById('history-search-input').value;
+  renderFolderDetail();
+}
+
 function renderHistory(tasks){
-  const list=document.getElementById('history-list'),empty=document.getElementById('history-empty'),bar=document.getElementById('history-toolbar');
-  if(!tasks.length){list.innerHTML='';empty.style.display='block';bar.style.display='none';return;}
+  const list=document.getElementById('history-list'),empty=document.getElementById('history-empty'),bar=document.getElementById('history-toolbar'),sum=document.getElementById('history-search-summary');
+  if(!tasks.length){list.innerHTML='';empty.style.display='block';bar.style.display='none';sum.style.display='none';return;}
   empty.style.display='none';bar.style.display='';
   tasks.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const terms=searchTerms(historyQuery);
+  if(terms.length){
+    tasks=tasks.filter(t=>{const h=taskHaystack(t);return terms.every(x=>h.includes(x));});
+    sum.style.display='';
+    if(!tasks.length){sum.innerHTML='Sin resultados.';list.innerHTML='';return;}
+    const dated=tasks.filter(t=>t.doneAt);
+    sum.innerHTML=`<b>${tasks.length}</b> coincidencia${tasks.length!==1?'s':''}`+
+      (dated.length?`<br>Última: <b>${cap(fmtDayLong(dated[0].doneAt))}</b>`:'')+
+      (dated.length>1?`<br>Primera: ${cap(fmtDayLong(dated[dated.length-1].doneAt))}`:'');
+  } else sum.style.display='none';
   // mes → día → tareas (orden de inserción = más reciente primero)
   const months={};
   tasks.forEach(t=>{
@@ -663,7 +750,7 @@ function renderHistory(tasks){
   const curKey=monthKeyOf(Date.now()); // por defecto solo el mes actual abierto
   list.innerHTML=Object.entries(months).map(([mk,days])=>{
     const n=Object.values(days).reduce((a,ts)=>a+ts.length,0);
-    return `<details class="history-month"${mk===curKey?' open':''}>
+    return `<details class="history-month"${(terms.length||mk===curKey)?' open':''}>
       <summary><span class="hm-title">${monthLabelOf(mk)}</span><span class="hm-count">${n}</span><span class="hm-chev">▾</span></summary>
       <div class="history-month-body">${Object.entries(days).map(([date,ts])=>`
         <div class="history-date-group">
@@ -673,6 +760,7 @@ function renderHistory(tasks){
       </div>
     </details>`;
   }).join('');
+  if(terms.length)highlightTerms(list,terms);
 }
 
 // ── RENDER TARJETA ─────────────────────────────────────
